@@ -14,7 +14,7 @@ use aiken/option.{choice, is_none}
 /// A MerkleTree representation, suitable for on-chain manipulation.
 pub type MerkleTree {
   Empty
-  Leaf { value: String, hash: Hash<Sha2_256, ByteArray> }
+  Leaf { value: ByteArray, hash: Hash<Sha2_256, ByteArray> }
   Node { hash: Hash<Sha2_256, ByteArray>, left: MerkleTree, right: MerkleTree }
 }
 
@@ -27,7 +27,7 @@ pub type ProofItem {
 }
 
 /// Deconstruct a 'MerkleTree' back to a list of elements.
-pub fn to_list(self: MerkleTree) -> List<String> {
+pub fn to_list(self: MerkleTree) -> List<ByteArray> {
   when self is {
     Empty -> []
     Leaf { value, .. } -> [value]
@@ -39,7 +39,7 @@ test to_list_1() {
   let dog = "dog"
   let cat = "cat"
   let mouse = "mouse"
-  let items = [dog, cat, mouse]
+  let items = from_strings([dog, cat, mouse])
 
   let mt = from_list(items)
 
@@ -47,7 +47,7 @@ test to_list_1() {
 }
 
 // Function returning a hash of a given Merkle Tree element
-pub fn root_hash(self: MerkleTree) -> Hash<Sha2_256, ByteArray> {
+pub fn root_hash_string(self: MerkleTree) -> Hash<Sha2_256, ByteArray> {
   when self is {
     Empty -> #""
     Leaf { hash, .. } -> hash
@@ -59,11 +59,11 @@ test root_hash_1() {
   let dog = "dog"
   let items = [dog]
 
-  let mt = from_list(items)
+  let mt = from_list(from_strings(items))
 
-  let node_hash = hash(dog)
+  let node_hash = hash_string(dog)
 
-  root_hash(mt) == node_hash
+  root_hash_string(mt) == node_hash
 }
 
 test root_hash_3() {
@@ -72,10 +72,11 @@ test root_hash_3() {
   let mouse = "mouse"
   let items = [dog, cat, mouse]
 
-  let mt = from_list(items)
+  let mt = from_list(from_strings(items))
 
-  let node_hash = sha2_256(bytearray.concat(hash(cat), hash(mouse)))
-  let rh = sha2_256(bytearray.concat(hash(dog), node_hash))
+  let node_hash =
+    sha2_256(bytearray.concat(hash_string(cat), hash_string(mouse)))
+  let rh = sha2_256(bytearray.concat(hash_string(dog), node_hash))
 
   expect Node { hash: root_hash, .. } = mt
 
@@ -84,16 +85,16 @@ test root_hash_3() {
 
 test root_hash_2() {
   let items = []
-  let mt = from_list(items)
+  let mt = from_list(from_strings(items))
 
   let node_hash = #""
 
-  root_hash(mt) == node_hash
+  root_hash_string(mt) == node_hash
 }
 
 /// Function atests whether two Merkle Tress are equal, this is the case when their root hashes match.
 pub fn is_equal(left: MerkleTree, right: MerkleTree) -> Bool {
-  root_hash(left) == root_hash(right)
+  root_hash_string(left) == root_hash_string(right)
 }
 
 /// Function returns a total numbers of leaves in the tree.
@@ -107,7 +108,7 @@ pub fn size(self: MerkleTree) -> Int {
 
 test size_1() {
   let items = []
-  let mt = from_list(items)
+  let mt = from_list(from_strings(items))
   size(mt) == 0
 }
 
@@ -116,7 +117,7 @@ test size_2() {
   let cat = "cat"
   let mouse = "mouse"
 
-  let mt = from_list([dog, cat, mouse])
+  let mt = from_list(from_strings([dog, cat, mouse]))
   size(mt) == 3
 }
 
@@ -126,7 +127,7 @@ test size_3() {
   let mouse = "mouse"
   let items = [dog, cat, mouse]
 
-  let mt = from_list(items)
+  let mt = from_list(from_strings(items))
   size(mt) == 3
 }
 
@@ -140,11 +141,11 @@ test size_4() {
 
   let items = [dog, cat, mouse, horse, pig, bull]
 
-  let mt = from_list(items)
+  let mt = from_list(from_strings(items))
   size(mt) == 6
 }
 
-fn combine_hash(left: Hash<alg, a>, right: Hash<alg, a>) -> Hash<alg, a> {
+fn combine_hash_string(left: Hash<alg, a>, right: Hash<alg, a>) -> Hash<alg, a> {
   sha2_256(bytearray.concat(left, right))
 }
 
@@ -165,7 +166,7 @@ test is_empty_1() {
 test is_empty_2() {
   let dog = "dog"
 
-  let mt = Leaf { value: dog, hash: hash(dog) }
+  let mt = Leaf { value: from_string(dog), hash: hash_string(dog) }
 
   is_empty(mt) == False
 }
@@ -184,8 +185,8 @@ fn do_proof(
         None
       }
     Node { left, right, .. } -> {
-      let rh = root_hash(right)
-      let lh = root_hash(left)
+      let rh = root_hash_string(right)
+      let lh = root_hash_string(left)
       let go_left: Option<Proof> =
         do_proof(left, item_hash, list.push(proof, Right { hash: rh }))
       let go_right: Option<Proof> =
@@ -198,7 +199,7 @@ fn do_proof(
 /// Construct a membership 'Proof' from an element and a 'MerkleTree'. Returns
 /// 'None' if the element isn't a member of the tree to begin with.
 /// Note function will return Some([]) in case root of the tree is also it's only one and only element
-pub fn get_proof(self: MerkleTree, item: String) -> Option<Proof> {
+pub fn get_proof(self: MerkleTree, item: ByteArray) -> Option<Proof> {
   let empty: Proof = []
   do_proof(self, hash(item), empty)
 }
@@ -211,10 +212,10 @@ test get_proof_1() {
   let pig = "pig"
   let bull = "bull"
 
-  let items = [dog, cat, mouse, horse, pig, bull]
+  let items = from_strings([dog, cat, mouse, horse, pig, bull])
   let mt = from_list(items)
 
-  let maybe_proof: Option<Proof> = get_proof(mt, "parrot")
+  let maybe_proof: Option<Proof> = get_proof(mt, from_string("parrot"))
 
   is_none(maybe_proof)
 }
@@ -222,10 +223,10 @@ test get_proof_1() {
 test get_proof_2() {
   let dog = "dog"
 
-  let items = [dog]
+  let items = from_strings([dog])
   let mt = from_list(items)
 
-  let maybe_proof: Option<Proof> = get_proof(mt, dog)
+  let maybe_proof: Option<Proof> = get_proof(mt, from_string(dog))
 
   expect Some(proof) = maybe_proof
 
@@ -238,13 +239,14 @@ test get_proof_3() {
   let cat = "cat"
   let mouse = "mouse"
 
-  let items = [dog, cat, mouse]
+  let items = from_strings([dog, cat, mouse])
 
   let mt = from_list(items)
 
-  let node_hash = sha2_256(bytearray.concat(hash(cat), hash(mouse)))
+  let node_hash =
+    sha2_256(bytearray.concat(hash_string(cat), hash_string(mouse)))
 
-  let maybe_proof: Option<Proof> = get_proof(mt, dog)
+  let maybe_proof: Option<Proof> = get_proof(mt, from_string(dog))
 
   expect Some(proof) = maybe_proof
 
@@ -263,12 +265,13 @@ test get_proof_4() {
   let mouse = "mouse"
   let horse = "horse"
 
-  let items = [dog, cat, mouse, horse]
+  let items = from_strings([dog, cat, mouse, horse])
 
   let mt = from_list(items)
 
-  let right_node_hash = sha2_256(bytearray.concat(hash(mouse), hash(horse)))
-  let maybe_proof: Option<Proof> = get_proof(mt, dog)
+  let right_node_hash =
+    sha2_256(bytearray.concat(hash_string(mouse), hash_string(horse)))
+  let maybe_proof: Option<Proof> = get_proof(mt, from_string(dog))
 
   expect Some(proof) = maybe_proof
 
@@ -280,13 +283,13 @@ test get_proof_4() {
   let h1: ByteArray = get_proof_item_value(p1)
   let h2: ByteArray = get_proof_item_value(p2)
 
-  size_match && h1 == hash(cat) && h2 == right_node_hash
+  size_match && h1 == hash_string(cat) && h2 == right_node_hash
 }
 
-fn do_from_list(items: List<String>, len: Int) -> MerkleTree {
+fn do_from_list(items: List<ByteArray>, len: Int) -> MerkleTree {
   when items is {
     [] -> Empty
-    [value] -> Leaf { value, hash: sha2_256(bytearray.from_string(value)) }
+    [value] -> Leaf { value, hash: hash(value) }
     all -> {
       let cutoff: Int = len / 2
       let left =
@@ -297,7 +300,8 @@ fn do_from_list(items: List<String>, len: Int) -> MerkleTree {
         all
         |> list.drop(cutoff)
         |> do_from_list(len - cutoff)
-      let hash = combine_hash(root_hash(left), root_hash(right))
+      let hash =
+        combine_hash_string(root_hash_string(left), root_hash_string(right))
       Node { hash, left, right }
     }
   }
@@ -306,24 +310,24 @@ fn do_from_list(items: List<String>, len: Int) -> MerkleTree {
 /// Construct a 'MerkleTree' from a list of hashes.
 /// Note that, while this operation is doable on-chain, it is expensive and
 /// preferably done off-chain.
-pub fn from_list(items: List<String>) -> MerkleTree {
+pub fn from_list(items: List<ByteArray>) -> MerkleTree {
   do_from_list(items, list.length(items))
 }
 
 test from_1() {
   let _a = -1
   let items = []
-  let mt = from_list(items)
+  let mt = from_list(from_strings(items))
 
   Empty == mt
 }
 
 test from_2() {
   let dog = "dog"
-  let items = [dog]
+  let items = from_strings([dog])
   let mt = from_list(items)
 
-  Leaf { value: dog, hash: hash(dog) } == mt
+  Leaf { value: from_string(dog), hash: hash_string(dog) } == mt
 }
 
 test from_3() {
@@ -331,14 +335,14 @@ test from_3() {
   let cat = "cat"
   let items = [dog, cat]
 
-  let mt = from_list(items)
+  let mt = from_list(from_strings(items))
 
-  let root_hash = sha2_256(bytearray.concat(hash(dog), hash(cat)))
+  let root_hash = sha2_256(bytearray.concat(hash_string(dog), hash_string(cat)))
 
   Node {
     hash: root_hash,
-    left: Leaf { value: dog, hash: hash(dog) },
-    right: Leaf { value: cat, hash: hash(cat) },
+    left: Leaf { value: from_string(dog), hash: hash_string(dog) },
+    right: Leaf { value: from_string(cat), hash: hash_string(cat) },
   } == mt
 }
 
@@ -348,18 +352,19 @@ test from_4() {
   let mouse = "mouse"
 
   let items = [dog, cat, mouse]
-  let mt = from_list(items)
+  let mt = from_list(from_strings(items))
 
-  let node_hash = sha2_256(bytearray.concat(hash(cat), hash(mouse)))
-  let root_hash = sha2_256(bytearray.concat(hash(dog), node_hash))
+  let node_hash =
+    sha2_256(bytearray.concat(hash_string(cat), hash_string(mouse)))
+  let root_hash = sha2_256(bytearray.concat(hash_string(dog), node_hash))
 
   Node {
     hash: root_hash,
-    left: Leaf { value: dog, hash: hash(dog) },
+    left: Leaf { value: from_string(dog), hash: hash_string(dog) },
     right: Node {
       hash: node_hash,
-      left: Leaf { value: cat, hash: hash(cat) },
-      right: Leaf { value: mouse, hash: hash(mouse) },
+      left: Leaf { value: from_string(cat), hash: hash_string(cat) },
+      right: Leaf { value: from_string(mouse), hash: hash_string(mouse) },
     },
   } == mt
 }
@@ -371,10 +376,12 @@ test from_5() {
   let horse = "horse"
 
   let items = [dog, cat, mouse, horse]
-  let mt = from_list(items)
+  let mt = from_list(from_strings(items))
 
-  let left_node_hash = sha2_256(bytearray.concat(hash(dog), hash(cat)))
-  let right_node_hash = sha2_256(bytearray.concat(hash(mouse), hash(horse)))
+  let left_node_hash =
+    sha2_256(bytearray.concat(hash_string(dog), hash_string(cat)))
+  let right_node_hash =
+    sha2_256(bytearray.concat(hash_string(mouse), hash_string(horse)))
 
   let root_hash = sha2_256(bytearray.concat(left_node_hash, right_node_hash))
 
@@ -382,13 +389,13 @@ test from_5() {
     hash: root_hash,
     left: Node {
       hash: left_node_hash,
-      left: Leaf { value: dog, hash: hash(dog) },
-      right: Leaf { value: cat, hash: hash(cat) },
+      left: Leaf { value: from_string(dog), hash: hash_string(dog) },
+      right: Leaf { value: from_string(cat), hash: hash_string(cat) },
     },
     right: Node {
       hash: right_node_hash,
-      left: Leaf { value: mouse, hash: hash(mouse) },
-      right: Leaf { value: horse, hash: hash(horse) },
+      left: Leaf { value: from_string(mouse), hash: hash_string(mouse) },
+      right: Leaf { value: from_string(horse), hash: hash_string(horse) },
     },
   } == mt
 }
@@ -397,7 +404,7 @@ test from_5() {
 // and a 'Proof'. The proof is guaranteed to be in log(n) of the size of the
 // tree, which is why we are interested in such data-structure in the first
 // place.
-pub fn member_from_hash(
+pub fn member_from_hash_string(
   item_hash: Hash<Sha2_256, ByteArray>,
   root_hash: Hash<Sha2_256, ByteArray>,
   proof: Proof,
@@ -407,9 +414,17 @@ pub fn member_from_hash(
     [head, ..tail] ->
       when head is {
         Left { hash: l } ->
-          member_from_hash(combine_hash(l, item_hash), root_hash, tail)
+          member_from_hash_string(
+            combine_hash_string(l, item_hash),
+            root_hash,
+            tail,
+          )
         Right { hash: r } ->
-          member_from_hash(combine_hash(item_hash, r), root_hash, tail)
+          member_from_hash_string(
+            combine_hash_string(item_hash, r),
+            root_hash,
+            tail,
+          )
       }
   }
 }
@@ -417,21 +432,21 @@ pub fn member_from_hash(
 // Check whether an element is part of a 'MerkleTree' using only its root hash
 // and a 'Proof'.
 pub fn member(
-  item: String,
+  item: ByteArray,
   root_hash: Hash<Sha2_256, ByteArray>,
   proof: Proof,
 ) -> Bool {
   let item_hash = hash(item)
-  member_from_hash(item_hash, root_hash, proof)
+  member_from_hash_string(item_hash, root_hash, proof)
 }
 
 test member_1() {
   let dog = "dog"
-  let items = [dog]
+  let items = from_strings([dog])
   let mt = from_list(items)
 
-  let item = dog
-  let rh = root_hash(mt)
+  let item = from_string(dog)
+  let rh = root_hash_string(mt)
 
   expect Some(proof) = get_proof(mt, item)
   member(item: item, root_hash: rh, proof: proof)
@@ -443,11 +458,11 @@ test member_2() {
   let mouse = "mouse"
   let horse = "horse"
 
-  let items = [dog, cat, mouse, horse]
+  let items = from_strings([dog, cat, mouse, horse])
   let mt = from_list(items)
 
-  let item = cat
-  let rh = root_hash(mt)
+  let item = from_string(cat)
+  let rh = root_hash_string(mt)
 
   expect Some(proof) = get_proof(mt, item)
   member(item: item, root_hash: rh, proof: proof)
@@ -457,11 +472,11 @@ test member_3() {
   let dog = "dog"
   let cat = "cat"
 
-  let items = [dog, cat]
+  let items = from_strings([dog, cat])
   let mt = from_list(items)
 
-  let item = cat
-  let rh = root_hash(mt)
+  let item = from_string(cat)
+  let rh = root_hash_string(mt)
 
   expect Some(proof) = get_proof(mt, item)
   member(item: item, root_hash: rh, proof: proof)
@@ -472,11 +487,11 @@ test member_4() {
   let cat = "cat"
   let mouse = "mouse"
 
-  let items = [dog, cat, mouse]
+  let items = from_strings([dog, cat, mouse])
   let mt = from_list(items)
 
-  let item = mouse
-  let rh = root_hash(mt)
+  let item = from_string(mouse)
+  let rh = root_hash_string(mt)
 
   expect Some(proof) = get_proof(mt, item)
   member(item: item, root_hash: rh, proof: proof)
@@ -490,11 +505,11 @@ test member_5() {
   let pig = "pig"
   let bull = "bull"
 
-  let items = [dog, cat, mouse, horse, pig, bull]
+  let items = from_strings([dog, cat, mouse, horse, pig, bull])
   let mt = from_list(items)
 
-  let item = pig
-  let rh = root_hash(mt)
+  let item = from_string(pig)
+  let rh = root_hash_string(mt)
 
   expect Some(proof) = get_proof(mt, item)
   member(item: item, root_hash: rh, proof: proof)
@@ -507,6 +522,14 @@ fn get_proof_item_value(proof_item: ProofItem) -> Hash<Sha2_256, ByteArray> {
   }
 }
 
-fn hash(item: String) -> Hash<Sha2_256, ByteArray> {
+fn from_strings(strs: List<String>) -> List<ByteArray> {
+  list.map(strs, fn(str) { from_string(str) })
+}
+
+fn hash_string(item: String) -> Hash<Sha2_256, ByteArray> {
   sha2_256(from_string(item))
+}
+
+fn hash(item: ByteArray) -> Hash<Sha2_256, ByteArray> {
+  sha2_256(item)
 }

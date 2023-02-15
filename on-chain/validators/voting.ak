@@ -199,27 +199,125 @@ fn count_votes(votes: List<Vote>) -> Dict<ChallengeProposal, Result> {
   do_count_votes(votes, empty)
 }
 
+test do_count_votes_1() {
+  let v1 =
+    Vote {
+      voter_key: #"01",
+      voting_power: 10,
+      challenge: 1,
+      proposal: 1,
+      choice: 2,
+    }
+  let v2 =
+    Vote {
+      voter_key: #"02",
+      voting_power: 20,
+      challenge: 1,
+      proposal: 2,
+      choice: 2,
+    }
+  let v3 =
+    Vote {
+      voter_key: #"03",
+      voting_power: 30,
+      challenge: 1,
+      proposal: 2,
+      choice: 2,
+    }
+  let v4 =
+    Vote {
+      voter_key: #"04",
+      voting_power: 30,
+      challenge: 2,
+      proposal: 1,
+      choice: 0,
+    }
+
+  let votes = [v1, v2, v3, v4]
+  let results: Dict<ChallengeProposal, Result> = count_votes(votes)
+  let cp1: ChallengeProposal = ChallengeProposal { challenge: 1, proposal: 1 }
+  let cp2: ChallengeProposal = ChallengeProposal { challenge: 1, proposal: 2 }
+  let cp3: ChallengeProposal = ChallengeProposal { challenge: 2, proposal: 1 }
+
+  expect Some(r1) = dict.get(results, cp1)
+  expect Some(r2) = dict.get(results, cp2)
+  expect Some(r3) = dict.get(results, cp3)
+
+  r1.yes == 10 && r1.no == 0 && r1.abstain == 0 && r2.yes == 50 && r2.no == 0 && r2.abstain == 0 && r3.yes == 0 && r3.no == 0 && r3.abstain == 30
+}
+
 fn to_flat_vote(v: Vote) -> FlatVote {
   let cp = ChallengeProposal { challenge: v.challenge, proposal: v.proposal }
   let y =
-    voting_power_for_choice(v)
-    |> opt_filter(fn(x) { x == 2 })
+    voting_power_for_choice(v, 2)
     |> option.or_else(0)
   let n =
-    voting_power_for_choice(v)
-    |> opt_filter(fn(x) { x == 1 })
+    voting_power_for_choice(v, 1)
     |> option.or_else(0)
   let a =
-    voting_power_for_choice(v)
-    |> opt_filter(fn(x) { x == 0 })
+    voting_power_for_choice(v, 0)
     |> option.or_else(0)
 
   FlatVote { key: cp, yes: y, no: n, abstain: a }
 }
 
-fn voting_power_for_choice(v: Vote) -> Option<VotingPower> {
-  list.find([0, 1, 2], fn(choice: Choice) { v.choice == choice })
-  |> option.map(fn(_c: Choice) { v.voting_power })
+test to_flat_vote_1() {
+  let v1 =
+    Vote {
+      voter_key: #"01",
+      voting_power: 10,
+      challenge: 1,
+      proposal: 1,
+      choice: 2,
+    }
+
+  to_flat_vote(v1) == FlatVote {
+    key: ChallengeProposal(1, 1),
+    yes: 10,
+    no: 0,
+    abstain: 0,
+  }
+}
+
+test to_flat_vote_2() {
+  let v1 =
+    Vote {
+      voter_key: #"01",
+      voting_power: 10,
+      challenge: 1,
+      proposal: 1,
+      choice: 1,
+    }
+
+  to_flat_vote(v1) == FlatVote {
+    key: ChallengeProposal(1, 1),
+    yes: 0,
+    no: 10,
+    abstain: 0,
+  }
+}
+
+test to_flat_vote_3() {
+  let v1 =
+    Vote {
+      voter_key: #"01",
+      voting_power: 10,
+      challenge: 1,
+      proposal: 1,
+      choice: 0,
+    }
+
+  to_flat_vote(v1) == FlatVote {
+    key: ChallengeProposal(1, 1),
+    yes: 0,
+    no: 0,
+    abstain: 10,
+  }
+}
+
+fn voting_power_for_choice(v: Vote, c: Choice) -> Option<VotingPower> {
+  list.find([0, 1, 2], fn(choice: Choice) { v.choice == choice && c == choice })
+  |> option.map(fn(_) { v.voting_power })
 }
 
 test voting_power_for_choice_1() {
@@ -232,7 +330,7 @@ test voting_power_for_choice_1() {
       choice: 0,
     }
 
-  voting_power_for_choice(v1) == Some(100)
+  voting_power_for_choice(v1, 0) == Some(100)
 }
 
 test voting_power_for_choice_2() {
@@ -245,7 +343,7 @@ test voting_power_for_choice_2() {
       choice: -1,
     }
 
-  voting_power_for_choice(v1) == None
+  voting_power_for_choice(v1, 0) == None
 }
 
 test voting_power_for_choice_3() {
@@ -258,18 +356,5 @@ test voting_power_for_choice_3() {
       choice: 2,
     }
 
-  voting_power_for_choice(v1) == Some(100)
-}
-
-// remove when PR: https://github.com/aiken-lang/stdlib/pull/21/files is merged in
-fn opt_filter(self: Option<a>, predicate: fn(a) -> Bool) -> Option<a> {
-  when self is {
-    Some(x) ->
-      if predicate(x) {
-        Some(x)
-      } else {
-        None
-      }
-    None -> None
-  }
+  voting_power_for_choice(v1, 2) == Some(100)
 }
