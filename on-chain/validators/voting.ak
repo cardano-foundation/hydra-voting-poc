@@ -1,3 +1,4 @@
+use aiken/builtin
 use aiken/bytearray
 use aiken/dict.{Dict}
 use aiken/hash.{Blake2b_224, Hash}
@@ -57,22 +58,11 @@ type ChallengeProposal {
   proposal: Proposal,
 }
 
-// TODO probably there is some way to do this from standard library??
-fn encode_challenge_proposal(cp: ChallengeProposal) -> ByteArray {
-  #""
-  |> bytearray.push(cp.challenge)
-  |> bytearray.push(0)
-  |> bytearray.push(cp.proposal)
-}
-
 fn compare_challenge_proposal(
   left: ChallengeProposal,
   right: ChallengeProposal,
 ) -> Ordering {
-  bytearray.compare(
-    encode_challenge_proposal(left),
-    encode_challenge_proposal(right),
-  )
+  bytearray.compare(builtin.serialise_data(left), builtin.serialise_data(right))
 }
 
 type ResultsBatchDatum {
