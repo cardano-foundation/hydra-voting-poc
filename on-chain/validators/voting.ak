@@ -7,11 +7,10 @@ use voting/address.{PubKeyHash}
 use voting/challenge_proposal.{Challenge, ChallengeProposal, Proposal}
 
 // TODO
-// 1. Improve code quality and add more tests
-// 2. support not only inline datums?
-// 3. maybe we need to spend those votes actually?
-// 4. add merkle tree to validate votes
-// 5. add ability for all parties to approve vit???
+// 1. add merkle tree to validate votes
+// 2. maybe we need to spend those votes actually?
+// 3. support not only inline datums?
+// 4. add ability for all parties to approve vote???
 
 type VotingPower =
   Int
