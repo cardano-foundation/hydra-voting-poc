@@ -28,9 +28,9 @@ type Vote {
 
 type FlatVote {
   key: ChallengeProposal,
-  yes: Int,
-  no: Int,
-  abstain: Int,
+  yes: VotingPower,
+  no: VotingPower,
+  abstain: VotingPower,
 }
 
 type Result {
@@ -43,14 +43,19 @@ type VotingDatum {
 }
 
 type ResultsBatchDatum {
+  //merke_tree_root: String
   results: Dict<ChallengeProposal, Result>,
 }
 
 type Redeemer {
-  //Approved // if the votes submit and locked and are complete, we have to use CIP-31
+  Approved
+  // if the votes submit and locked and are complete, we have to use CIP-31
   CreateVoteBatch { id: Hash<Blake2b_224, String> }
 }
 
+// Note:
+// Smart Contract assumes that votes are deduped across all batches
+// otherwise it cannot possibly work because some votes could be counted twice
 fn spend(
   _voting_datum: VotingDatum,
   redeemer: Redeemer,
@@ -73,7 +78,7 @@ fn spend(
         id,
       )
     }
-    // Approved -> False
+    Approved -> False
     _ -> False
   }
 }
