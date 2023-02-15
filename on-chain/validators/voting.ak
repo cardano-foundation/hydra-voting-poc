@@ -1,29 +1,19 @@
-use aiken/builtin
-use aiken/bytearray
 use aiken/dict.{Dict}
 use aiken/hash.{Blake2b_224, Hash}
 use aiken/list
 use aiken/option
 use aiken/transaction.{Datum, InlineDatum, Input, Output, ScriptContext}
-use aiken/transaction/credential.{VerificationKey}
+use voting/address.{PubKeyHash}
+use voting/challenge_proposal.{Challenge, ChallengeProposal, Proposal}
 
 // TODO
-// 1. Improve code quality and add tests
+// 1. Improve code quality and add more tests
 // 2. support not only inline datums?
 // 3. maybe we need to spend those votes actually?
 // 4. add merkle tree to validate votes
-// 5. add ability for all parties to approve???
-
-type PubKeyHash =
-  Hash<Blake2b_224, VerificationKey>
+// 5. add ability for all parties to approve vit???
 
 type VotingPower =
-  Int
-
-type Challenge =
-  Int
-
-type Proposal =
   Int
 
 type Choice =
@@ -51,18 +41,6 @@ type Result {
 }
 
 type VotingDatum {
-}
-
-type ChallengeProposal {
-  challenge: Challenge,
-  proposal: Proposal,
-}
-
-fn compare_challenge_proposal(
-  left: ChallengeProposal,
-  right: ChallengeProposal,
-) -> Ordering {
-  bytearray.compare(builtin.serialise_data(left), builtin.serialise_data(right))
 }
 
 type ResultsBatchDatum {
@@ -175,10 +153,10 @@ fn do_count_votes(
           self: dict.new(),
           key: ChallengeProposal { challenge: c, proposal: p },
           value: Result { yes: fv.yes, no: fv.no, abstain: fv.abstain },
-          compare: compare_challenge_proposal,
+          compare: challenge_proposal.compare,
         ),
         with: conflict_resolver_fn,
-        compare: compare_challenge_proposal,
+        compare: challenge_proposal.compare,
       )
     }
   }
