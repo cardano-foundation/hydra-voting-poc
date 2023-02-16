@@ -10,6 +10,11 @@ Currently IOG is the only party doing tallying of the votes (meaning checking re
 ### Idea
 Using Hydra experiment with a distributed Catalyst tally process such that more parties can attest and verify validity of Catalyst Fund results.
 
+### Slides
+- Hydra Voting PoC Kick-Off: https://docs.google.com/presentation/d/1oVB_J3eBKbhWc_yAr5w8cFz2TpL2Zngv8pZjK6Gtruk/edit#slide=id.g124655d21b1_2_509
+- Rough Plan and focusing on M1 first: https://docs.google.com/presentation/d/16wnWy9Br0ewTJMZefeGBkNEj3jDyfjif/edit#slide=id.p1
+- Feb 2023 M1 Status Update: https://docs.google.com/presentation/d/1ee7vQLIUcoDfHeU6ln_-_YlKvXM-5WvM/edit#slide=id.p1
+
 ### Milestones
 - M1 - Tally ca 1 mln Catalyst votes (as in compatible with Catalyst domain model) with min 3 and max 10 Hydra Head operators, perform distributed tally process and obtain only one result
     - 🟢 Port Merkle Tree from Hydra to Aiken (https://github.com/input-output-hk/hydra/blame/master/plutus-merkle-tree/src/Plutus/MerkleTree.hs) -> https://github.com/aiken-lang/trees/pull/1/files
@@ -21,7 +26,7 @@ Using Hydra experiment with a distributed Catalyst tally process such that more 
 ![image](https://user-images.githubusercontent.com/335933/219307471-2b9a367c-2586-4fe5-92a7-97e582f35c12.png)
 
 - M2 - Using Partial Homomorphic Encryption tally the votes in such a way that each Hydra Head Operator cannot tally alone but all operators only can tally together
-
+- M3 - Authentication for Hydra Head Operators via NFTs
 
 ### Deployment
 While overall goal is that anybody could tally but intially we expect that IOG / Emurgo / CF will tally the votes using Hydra Heads. The idea is that we want to avoid in initial versions having to pay and lock up people funds for slashing (in case cheating by the group was detected).
@@ -34,3 +39,4 @@ While overall goal is that anybody could tally but intially we expect that IOG /
 - M2: Since Partial Homomorphic Encryption is CPU intensive, how can we actually run it in smart contract. Regardless of the fact that these are very resource intensitve tasks, right now there are no implementations for this available neither in Aiken nor in PlutusTx (to our knowledge)
 - General: Once we open up the tallying to all people, how can we in a decentralised way select Hydra Head Operators doing the tally process? One idea is that we conduct voting on L1 and Hydra Head operators + backup operators receive ca 1 to 2 years licence, such a license such cover operation for a few Catalyst rounds but question is whether people will want to participate in selection of Hydra Head Operators doing the tallying.
 - General: Currently Hydra does not support external transaction validation, meaning just like in Cardano transaction is automatically validated. External transaction validation could be useful in scenarios where a Hydra Head operator would also check validity of transaction against their off chain infrastructure.
+- M3: Authentication via NFTs
