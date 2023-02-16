@@ -6,8 +6,7 @@
   },
   "validators": [
     {
-      "title": "voting",
-      "purpose": "spend",
+      "title": "voting.hydra_voting",
       "datum": {
         "title": "VotingDatum",
         "anyOf": []

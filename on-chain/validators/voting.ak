@@ -2,7 +2,7 @@ use aiken/dict.{Dict}
 use aiken/hash.{Blake2b_224, Hash}
 use aiken/list
 use aiken/option
-use aiken/transaction.{Datum, InlineDatum, Input, Output, ScriptContext}
+use aiken/transaction.{Datum, InlineDatum, Input, Output, ScriptContext, Spend}
 use voting/address.{PubKeyHash}
 use voting/challenge_proposal.{Challenge, ChallengeProposal, Proposal}
 
@@ -42,6 +42,8 @@ type Result {
 type VotingDatum {
 }
 
+// batch_size: Int?
+
 type ResultsBatchDatum {
   //merke_tree_root: String
   results: Dict<ChallengeProposal, Result>,
@@ -50,36 +52,39 @@ type ResultsBatchDatum {
 type Redeemer {
   Approved
   // if the votes submit and locked and are complete, we have to use CIP-31
-  CreateVoteBatch { id: Hash<Blake2b_224, String> }
+  CreateVoteBatch {
+    // merkle_tree: MerkleTree,
+    // id = in fact merkle root hash
+    id: Hash<Blake2b_224, String>,
+  }
 }
 
 // Note:
 // Smart Contract assumes that votes are deduped across all batches
 // otherwise it cannot possibly work because some votes could be counted twice
-fn spend(
-  _voting_datum: VotingDatum,
-  redeemer: Redeemer,
-  sc: ScriptContext,
-) -> Bool {
-  // we lock votes with 0 ADA into smart contract address (off chain)
+validator hydra_voting {
+  fn(_voting_datum: VotingDatum, redeemer: Redeemer, sc: ScriptContext) -> Bool {
+    // we lock votes with 0 ADA into smart contract address (off chain)
+    expect Spend(_or) = sc.purpose
 
-  when redeemer is {
-    CreateVoteBatch { id } -> {
-      // we sum all votes and output in the ResultsBatchDatum
-      // and somehow verify id of the batch and total votes in the batch
-      // alternatively use normal inputs
-      let votes: List<Vote> =
-        get_votes_from_inputs(sc.transaction.reference_inputs)
-      let results: Dict<ChallengeProposal, Result> = count_votes(votes)
-      // now we need to check if any of the output UTxOs contains results
-      // now we have to check if batch_id matches
-      results_must_match(results: results, outputs: sc.transaction.outputs) && batch_id_must_match(
-        votes,
-        id,
-      )
+    when redeemer is {
+      CreateVoteBatch { id } -> {
+        // we sum all votes and output in the ResultsBatchDatum
+        // and somehow verify id of the batch and total votes in the batch
+        // alternatively use normal inputs
+        let votes: List<Vote> =
+          get_votes_from_inputs(sc.transaction.reference_inputs)
+        let results: Dict<ChallengeProposal, Result> = count_votes(votes)
+        // now we need to check if any of the output UTxOs contains results
+        // now we have to check if batch_id matches
+        results_must_match(results: results, outputs: sc.transaction.outputs) && batch_id_must_match(
+          votes,
+          id,
+        )
+      }
+      Approved -> False
+      _ -> False
     }
-    Approved -> False
-    _ -> False
   }
 }
 
@@ -108,6 +113,8 @@ fn batch_id_must_match(
   True
 }
 
+// gets data from datum
+// Consider using expect to enforce InlineDatum
 fn get_data_from_datum(d: Datum) -> Option<Data> {
   when d is {
     InlineDatum(id) -> Some(id)
@@ -119,12 +126,12 @@ fn get_votes_from_inputs(inputs: List<Input>) -> List<Vote> {
   list.map(inputs, fn(i) { i.output.datum })
   |> list.filter_map(fn(d) { get_data_from_datum(d) })
   |> list.map(
-  fn(d) {
-    // casting to Vote
-    expect v: Vote = d
-    v
-  })
-  
+    fn(d) {
+      // casting to Vote
+      expect v: Vote = d
+      v
+    },
+  )
 }
 
 fn do_count_votes(
