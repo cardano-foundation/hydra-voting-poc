@@ -22,6 +22,7 @@ Using Hydra experiment with a distributed Catalyst tally process such that more 
     - 🟢 Write fake votes generator compatible with Catalyst domain model
     - :hourglass_flowing_sand: Spin up local Hydra Head network
     - :hourglass_flowing_sand: Write and run on chain contract counting unencrypted Catalyst votes with off-chain code
+    - Use one of Open Source Merkle Trees implementation in offchain infra or port our Merkle Tree to (Java / Scala / Kotlin)
     - Hook up Merkle Tree to contract counting votes to attest if vote which is on chain is part of the tree
     - Perform final votes batch calculation merking all Merkle Trees together and giving a final result, when closing head final results plus global merkle tree root should be committed to L1.
 
