@@ -36,6 +36,7 @@ While overall goal is that anybody could tally but intially we expect that IOG /
 
 General Statements:
 - M1: Since votes are handled in batches - they only way system can work is that votes are not duplicated, this means that votes votes coming from vote domain / (currently jormungandr sidechain) are already unique and deduplicated (since we won't have one big Merkle Tree but a lot of small ones).
+- Security assumptions: the current design of the system has currently security equal to 1 honest Hydra Head operator, meaning only if all Hydra Head Operators form a group and agree to .e.g. drop certain votes system could be compromised. There is an idea to explore in the future to use so called Mithril Committe on L1 that could also verify operation of Hydra Head Operators. Effectively this committee could independently tally the votes and publish their tally result on L1. This could increase security of the system with additional complexity of additional technology (Mithril) and Committe doing the work.
 
 ## General Open Problems / Questions
 - Election: we would like to anybody could potentially run Hydra Head nodes but we do know that number of these people cannot exceed certain amount, e.g. 10
