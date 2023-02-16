@@ -7,6 +7,9 @@ Check [Project Charter](./docs/project-charter.md) for details about this projec
 ### Problem statement
 Currently IOG is the only party doing tallying of the votes (meaning checking result of the votes). We would like to see how Hydra could be used to decentralise this process and allow more members (ideally from Cardano community) to tally / count Catalyst votes independently while reaching the same final verdict.
 
+### Idea
+Using Hydra experiment with a distributed Catalyst tally process such that more parties can attest and verify validity of Catalyst Fund results.
+
 ### Milestones
 - M1 - Tally ca 1 mln Catalyst votes (as in compatible with Catalyst domain model) with min 3 and max 10 Hydra Head operators, perform distributed tally process and obtain only one result
     - 🟢 Port Merkle Tree from Hydra to Aiken (https://github.com/input-output-hk/hydra/blame/master/plutus-merkle-tree/src/Plutus/MerkleTree.hs) -> https://github.com/aiken-lang/trees/pull/1/files
