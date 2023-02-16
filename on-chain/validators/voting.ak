@@ -72,8 +72,7 @@ validator hydra_voting {
         // we sum all votes and output in the ResultsBatchDatum
         // and somehow verify id of the batch and total votes in the batch
         // alternatively use normal inputs
-        let votes: List<Vote> =
-          get_votes_from_inputs(sc.transaction.reference_inputs)
+        let votes: List<Vote> = get_votes_from_inputs(sc.transaction.inputs)
         let results: Dict<ChallengeProposal, Result> = count_votes(votes)
         // now we need to check if any of the output UTxOs contains results
         // now we have to check if batch_id matches
