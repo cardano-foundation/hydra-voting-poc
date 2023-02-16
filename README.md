@@ -22,6 +22,7 @@ Using Hydra experiment with a distributed Catalyst tally process such that more 
     - 🟢 Write fake votes generator compatible with Catalyst domain model
     - :hourglass_flowing_sand: Spin up local Hydra Head network
     - :hourglass_flowing_sand: Write and run on chain contract counting unencrypted Catalyst votes with off-chain code
+    - Use one of Open Source Merkle Trees implementation in offchain infra or port our Merkle Tree to (Java / Scala / Kotlin)
     - Hook up Merkle Tree to contract counting votes to attest if vote which is on chain is part of the tree
     - Perform final votes batch calculation merking all Merkle Trees together and giving a final result, when closing head final results plus global merkle tree root should be committed to L1.
 
@@ -33,8 +34,15 @@ Using Hydra experiment with a distributed Catalyst tally process such that more 
 ### Deployment
 While overall goal is that anybody could tally but intially we expect that IOG / Emurgo / CF will tally the votes using Hydra Heads. The idea is that we want to avoid in initial versions having to pay and lock up people funds for slashing (in case cheating by the group was detected).
 
+General Statements:
+- M1: Since votes are handled in batches - they only way system can work is that votes are not duplicated, this means that votes votes coming from vote domain / (currently jormungandr sidechain) are already unique and deduplicated (since we won't have one big Merkle Tree but a lot of small ones).
+- Security assumptions: the current design of the system has currently security equal to 1 honest Hydra Head operator, meaning only if all Hydra Head Operators form a group and agree to .e.g. drop certain votes system could be compromised. There is an idea to explore in the future to use so called Mithril Committe on L1 that could also verify operation of Hydra Head Operators. Effectively this committee could independently tally the votes and publish their tally result on L1. This could increase security of the system with additional complexity of additional technology (Mithril) and Committe doing the work.
+
 ## General Open Problems / Questions
 - Election: we would like to anybody could potentially run Hydra Head nodes but we do know that number of these people cannot exceed certain amount, e.g. 10
+- M1: if we separate voting from tallying not only from the business domain (which it is separated anyway) but also from technical point of view then votes in an encrypted form need to be imported by one Hydra Head Operator into a new network. Question: how do we make sure that this operator is trusted and that the same copy of votes which other operators have is in fact imported (idea: use smart contracts for this)
+- General: if jormungandr continues to be run in a private network for now, how will Hydra Head operators obtain access to individual votes (especially if they are outside of 3 founding entities)
+
 - M2: How split the key in such a way that each operator only gets a part of the key
 - M2: How to count the votes together, in Hydra one operator needs to sign a transaction and all need to simply validate (full consensus)
 - If we ever submit votes directly to Hydra - how to assure that one operator being temporary offline won't disturb the whole voting session, one idea, hydra can deliver n x m signing, meaning we can configure Hydra such that only ca 80% of operators need to sign. Unless voters directly interact with Hydra network - this is not really a needed feature.
