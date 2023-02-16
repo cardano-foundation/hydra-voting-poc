@@ -10,6 +10,7 @@ use aiken/option.{choice, is_none}
 /// membership proofs are still expected to happen *off-chain* while only the
 /// proof verification should be done on-chain.
 ///
+
 /// Code ported to Aiken from Hydra (https://github.com/input-output-hk/hydra/blob/master/plutus-merkle-tree/src/Plutus/MerkleTree.hs)
 /// A MerkleTree representation, suitable for on-chain manipulation.
 pub type MerkleTree {
@@ -515,6 +516,55 @@ test member_5() {
   member(item: item, root_hash: rh, proof: proof)
 }
 
+pub fn member_from_tree(
+  item: ByteArray,
+  root_hash: Hash<Sha2_256, ByteArray>,
+  tree: MerkleTree,
+) -> Bool {
+  let proof: Option<Proof> = get_proof(tree, item)
+  when proof is {
+    Some(p) -> {
+      let item_hash = hash(item)
+      member_from_hash_string(item_hash, root_hash, p)
+    }
+    None -> False
+  }
+}
+
+test member_from_tree_1() {
+  let dog = "dog"
+  let cat = "cat"
+  let mouse = "mouse"
+  let horse = "horse"
+  let pig = "pig"
+  let bull = "bull"
+
+  let items = from_strings([dog, cat, mouse, horse, pig, bull])
+  let mt = from_list(items)
+
+  let item = from_string(pig)
+  let rh = root_hash_string(mt)
+
+  member_from_tree(item: item, root_hash: rh, tree: mt)
+}
+
+test member_from_tree_2() {
+  let dog = "dog"
+  let cat = "cat"
+  let mouse = "mouse"
+  let horse = "horse"
+  let pig = "pig"
+  let bull = "bull"
+
+  let items = from_strings([dog, cat, mouse, horse, pig, bull])
+  let mt = from_list(items)
+
+  let item = from_string("parrot")
+  let rh = root_hash_string(mt)
+
+  member_from_tree(item: item, root_hash: rh, tree: mt) == False
+}
+
 fn get_proof_item_value(proof_item: ProofItem) -> Hash<Sha2_256, ByteArray> {
   when proof_item is {
     Left(x) -> x
@@ -527,7 +577,7 @@ fn from_strings(strs: List<String>) -> List<ByteArray> {
 }
 
 fn hash_string(item: String) -> Hash<Sha2_256, ByteArray> {
-  sha2_256(from_string(item))
+  hash(from_string(item))
 }
 
 fn hash(item: ByteArray) -> Hash<Sha2_256, ByteArray> {
