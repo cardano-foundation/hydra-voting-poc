@@ -19,7 +19,7 @@ Using Hydra experiment with a distributed Catalyst tally process such that more 
 - M1 - Tally ca 1 mln Catalyst votes (as in compatible with Catalyst domain model) with min 3 and max 10 Hydra Head operators, perform distributed tally process and obtain only one result
     - 🟢 Port Merkle Tree from Hydra to Aiken (https://github.com/input-output-hk/hydra/blame/master/plutus-merkle-tree/src/Plutus/MerkleTree.hs) -> https://github.com/aiken-lang/trees/pull/1/files
     - 🟢 Write simple on chain contract that counts votes (https://github.com/cardano-foundation/hydra-voting-poc/blob/master/on-chain/validators/voting.ak) 
-    - Run on chain contract counting unencrypted Catalyst votes with off-chain code
+    - :hourglass_flowing_sand: Run on chain contract counting unencrypted Catalyst votes with off-chain code
     - Hook up Merkle Tree to contract counting votes to attest if vote which is on chain is part of the tree
     - Perform final votes batch calculation merking all Merkle Trees together and giving a final result
 
