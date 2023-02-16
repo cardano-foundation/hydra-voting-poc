@@ -25,7 +25,7 @@ Using Hydra experiment with a distributed Catalyst tally process such that more 
 
 ![image](https://user-images.githubusercontent.com/335933/219307471-2b9a367c-2586-4fe5-92a7-97e582f35c12.png)
 
-- M2 - Using Partial Homomorphic Encryption tally the votes in such a way that each Hydra Head Operator cannot tally alone but all operators only can tally together
+- M2 - Since Catalyst votes are encrypted on jormungandr sidechain, we will be using Partial Homomorphic Encryption tally the votes in such a way that each Hydra Head Operator cannot tally alone but all operators only can tally together
 - M3 - Authentication for Hydra Head Operators via NFTs
 
 ### Deployment
