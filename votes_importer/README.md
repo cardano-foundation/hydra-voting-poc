@@ -1,4 +1,7 @@
-# Hydra-vote-importer
+# Hydra Vote POC Off-chain Application
+
+The current version is importing votes on L1. After successful testing on L1, it will be changed to use
+Hydra.
 
 ## Requirements
 
@@ -7,19 +10,38 @@ Java 17
 ## To build
 
 ```
-$> ./gradlew clean build
+$> ./gradlew clean build -x test
 ```
 
 ## To run
 
 ```
-$> java -jar build/libs/hydra-vote-importer-0.0.1-SNAPSHOT.jar
+$> java -jar build/libs/hydra-vote-offchain-0.0.1-SNAPSHOT.jar
 ```
+
+### Create config file
+
+- Create a folder "config" in project folder (in working dir)
+- Create application.properties in config folder with the following content
+
+```properties
+voting.batch.contract=addr_test1wrghjsumtcdrnfmvcm6qqp0dcw6aylmhcrz3mj95d9t9aqq878m2y
+# Delay between two import transactions
+import.interval=100
+cardano.network=preprod
+bf.project_id=<Blockfrost project id>
+
+operator.mnemonic=<24 words mnemonic for sender's account>
+
+```
+
 
 From spring shell
 
+### Generate Random Votes
+
 ```
-shell:> generate-votes --nVoters 90000 --nVotes 300000 --outFile votes.json
+shell:> generate-votes --nVoters 20 --nVotes 1000 --outFile votes.json
 ```
 
 ```
@@ -31,10 +53,8 @@ shell:> generate-votes --nVoters 90000 --nVotes 300000 --outFile votes.json
 }
 ```
 
-challenge+proposal id are unique.
-choice is just a number, say 0 = abstain, 1 = nay, 2 = yay
-You can then generate some files with test data.
-If you want to simulate Fund 9 size: generate 89K random ed25519 public keys, and assign a random voting power from say 500 to 10000000 (top value kinda arbitrary).  This would be your "voters".
-Then generate X random Challenge ID's (say 20).  And make 100 random proposal id's per challenge.
-Then just generate 300K random votes, where you pick a voter randomly from your voter list, a random challenge+proposal and a random choice.
+### Import Votes to contract address
 
+```shell
+shell:>import-votes --batchSize 100 --startIndex 0 --voteFile votes.json
+```
