@@ -1,7 +1,12 @@
 package org.cardanofoundation.hydrapoc;
 
+import com.bloxbean.cardano.client.api.model.Utxo;
+import com.bloxbean.cardano.client.util.Tuple;
+import org.cardanofoundation.hydrapoc.batch.VoteBatcher;
+import org.cardanofoundation.hydrapoc.batch.VoteUtxoFinder;
 import org.cardanofoundation.hydrapoc.commands.Commands;
 import org.cardanofoundation.hydrapoc.generator.RandomVoteGenerator;
+import org.cardanofoundation.hydrapoc.importvote.VoteDatum;
 import org.cardanofoundation.hydrapoc.importvote.VoteImporter;
 import org.cardanofoundation.hydrapoc.model.Vote;
 import org.junit.jupiter.api.Test;
@@ -19,6 +24,10 @@ class HydraVoteImporterApplicationTests {
     private VoteImporter voteImporter;
     @Autowired
     private Commands generateVotes;
+    @Autowired
+    private VoteUtxoFinder voteUtxoFinder;
+    @Autowired
+    private VoteBatcher voteBatcher;
 
     @Test
     public void importVotes() throws Exception{
@@ -37,5 +46,15 @@ class HydraVoteImporterApplicationTests {
         System.out.println(txIds);
     }
 
+    @Test
+    public void getUtxosWithVotes() {
+        List<Tuple<Utxo, VoteDatum>> utxoTuples = voteUtxoFinder.getUtxosWithVotes(20);
+        System.out.println(utxoTuples);
+    }
+
+    @Test
+    public void createAndPostBatch() {
+        voteBatcher.createAndPostBatchTransaction(20);
+    }
 
 }
