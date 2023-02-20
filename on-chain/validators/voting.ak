@@ -39,10 +39,9 @@ type Result {
   abstain: VotingPower,
 }
 
+// batch_size: Int?
 type VotingDatum {
 }
-
-// batch_size: Int?
 
 type ResultsBatchDatum {
   //merke_tree_root: String

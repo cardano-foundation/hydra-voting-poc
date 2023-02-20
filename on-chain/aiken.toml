@@ -4,5 +4,5 @@ licences = []
 description = "Hydra Voting PoC"
 
 dependencies = [
-  { name = "aiken-lang/stdlib", version = "3b47c89006e7580c2213370d7426ed2a38d2836e", source = "github" }
+  { name = "aiken-lang/stdlib", version = "288d05b0d1421eafe936010ff96e885164e8a7bd", source = "github" }
 ]
