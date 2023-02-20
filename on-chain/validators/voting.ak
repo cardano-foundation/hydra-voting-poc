@@ -40,6 +40,7 @@ type Result {
 }
 
 // batch_size: Int?
+// merkle_tree: MerkleTree
 type VotingDatum {
 }
 
@@ -49,7 +50,6 @@ type ResultsBatchDatum {
 }
 
 type Redeemer {
-  Approved
   // if the votes submit and locked and are complete, we have to use CIP-31
   CreateVoteBatch {
     // merkle_tree: MerkleTree,
@@ -80,7 +80,6 @@ validator hydra_voting {
           id,
         )
       }
-      Approved -> False
       _ -> False
     }
   }
