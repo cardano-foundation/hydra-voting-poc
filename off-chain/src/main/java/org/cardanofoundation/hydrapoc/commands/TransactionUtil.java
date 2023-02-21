@@ -1,4 +1,4 @@
-package org.cardanofoundation.hydrapoc.util;
+package org.cardanofoundation.hydrapoc.commands;
 
 import com.bloxbean.cardano.client.api.model.Result;
 import com.bloxbean.cardano.client.backend.api.TransactionService;

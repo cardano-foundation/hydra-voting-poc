@@ -18,9 +18,10 @@ import com.bloxbean.cardano.client.transaction.spec.TransactionOutput;
 import com.bloxbean.cardano.client.transaction.spec.Value;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.cardanofoundation.hydrapoc.commands.PlutusScriptUtil;
 import org.cardanofoundation.hydrapoc.common.OperatorAccountProvider;
 import org.cardanofoundation.hydrapoc.model.Vote;
-import org.cardanofoundation.hydrapoc.util.TransactionUtil;
+import org.cardanofoundation.hydrapoc.commands.TransactionUtil;
 import org.springframework.retry.annotation.Backoff;
 import org.springframework.retry.annotation.Retryable;
 import org.springframework.stereotype.Component;
@@ -41,9 +42,7 @@ public class VoteImporter {
     private final TransactionProcessor transactionProcessor;
     private final OperatorAccountProvider operatorAccountProvider;
     private final TransactionUtil transactionUtil;
-
-    @org.springframework.beans.factory.annotation.Value("${voting.batch.contract}")
-    private String voteBatchContractAddress;
+    private final PlutusScriptUtil plutusScriptUtil;
 
     private PlutusObjectConverter plutusObjectConverter = new DefaultPlutusObjectConverter();
 
@@ -67,6 +66,8 @@ public class VoteImporter {
 
         String sender = operatorAccountProvider.getOperatorAddress();
         log.info("Sender Address: " + sender);
+        String voteBatchContractAddress = plutusScriptUtil.getVoteBatcherContractAddress();
+        log.info("Contract Address: " + voteBatchContractAddress);
 
         //Create a empty output builder
         TxOutputBuilder txOutputBuilder = (context, outputs) -> {
@@ -104,7 +105,7 @@ public class VoteImporter {
         if (!result.isSuccessful())
             throw new RuntimeException("Transaction failed. " + result.getResponse());
         else
-            System.out.println("Import Transaction Id : " + result.getValue());
+            log.info("Import Transaction Id : " + result.getValue());
 
         transactionUtil.waitForTransaction(result);
         return result.getValue();

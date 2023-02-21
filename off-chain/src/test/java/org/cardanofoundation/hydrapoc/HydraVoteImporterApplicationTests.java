@@ -53,7 +53,7 @@ class HydraVoteImporterApplicationTests {
     }
 
     @Test
-    public void createAndPostBatch() {
+    public void createAndPostBatch() throws Exception {
         voteBatcher.createAndPostBatchTransaction(20);
     }
 
