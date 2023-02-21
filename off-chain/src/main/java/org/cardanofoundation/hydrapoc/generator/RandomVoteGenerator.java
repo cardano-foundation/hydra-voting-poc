@@ -7,6 +7,7 @@ import org.cardanofoundation.hydrapoc.model.ChallengeProposal;
 import org.cardanofoundation.hydrapoc.model.Choice;
 import org.cardanofoundation.hydrapoc.model.Vote;
 import org.cardanofoundation.hydrapoc.model.Voter;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
 import java.io.File;
@@ -16,6 +17,12 @@ import java.util.*;
 @Slf4j
 @Component
 public class RandomVoteGenerator {
+    @Value("${proposals.per.challenge:100}")
+    private int nRandomProposal;
+
+    @Value("${total.challenges:20}")
+    private int nChallenges;
+
     RandomPublicKeyGenerator randomPublicKeyGenerator = new RandomPublicKeyGenerator();
     ObjectMapper objectMapper = new ObjectMapper();
 
@@ -42,7 +49,7 @@ public class RandomVoteGenerator {
 
         //Generate random challenges + proposal
         Set<Long> challengeIds = new HashSet<>();
-        for (int i =0; i<20; i++)
+        for (int i =0; i<nChallenges; i++)
             challengeIds.add(RandomUtil.getRandomNumber(12000000, 450000000));
         log.info("Random challenge generation {} - Done", challengeIds.size());
 
@@ -50,7 +57,7 @@ public class RandomVoteGenerator {
         //100 random proposals for every challenge
         List<ChallengeProposal> challengeProposals = new ArrayList<>();
         for (Long challengeId: challengeIds) {
-            for (int i=0; i<100; i++) {
+            for (int i=0; i<nRandomProposal; i++) {
                 ChallengeProposal challengeProposal = new ChallengeProposal(challengeId, RandomUtil.getRandomNumber(100000, 6000000));
                 challengeProposals.add(challengeProposal);
             }

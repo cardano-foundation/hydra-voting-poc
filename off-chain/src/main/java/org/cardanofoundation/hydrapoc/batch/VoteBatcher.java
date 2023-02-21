@@ -4,6 +4,7 @@ import com.bloxbean.cardano.client.api.ProtocolParamsSupplier;
 import com.bloxbean.cardano.client.api.TransactionProcessor;
 import com.bloxbean.cardano.client.api.UtxoSupplier;
 import com.bloxbean.cardano.client.api.exception.ApiException;
+import com.bloxbean.cardano.client.api.exception.ApiRuntimeException;
 import com.bloxbean.cardano.client.api.model.Amount;
 import com.bloxbean.cardano.client.api.model.Result;
 import com.bloxbean.cardano.client.api.model.Utxo;
@@ -23,6 +24,7 @@ import com.bloxbean.cardano.client.function.helper.model.ScriptCallContext;
 import com.bloxbean.cardano.client.plutus.api.PlutusObjectConverter;
 import com.bloxbean.cardano.client.plutus.impl.DefaultPlutusObjectConverter;
 import com.bloxbean.cardano.client.transaction.spec.*;
+import com.bloxbean.cardano.client.util.JsonUtil;
 import com.bloxbean.cardano.client.util.Tuple;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -57,6 +59,7 @@ public class VoteBatcher {
 
     private PlutusObjectConverter plutusObjectConverter = new DefaultPlutusObjectConverter();
 
+    //TODO -- check collateral return when new utxo added during balanceTx
     public String createAndPostBatchTransaction(int batchSize) throws Exception {
         PlutusV2Script voteBatcherScript = plutusScriptUtil.getVoteBatcherContract();
         String voteBatcherScriptAddress = plutusScriptUtil.getVoteBatcherContractAddress();
@@ -96,8 +99,10 @@ public class VoteBatcher {
                     log.warn("Invalid vote, " + voteDatum.getChoice());
             }
         }
-
-        log.info(resultBatchDatum.toString());
+        log.info("############# Input Votes ############");
+        log.info(JsonUtil.getPrettyJson(utxoTuples.stream().map(utxoVoteDatumTuple -> utxoVoteDatumTuple._2).collect(Collectors.toList())));
+        log.info("########### Result Datum #############");
+        log.info(JsonUtil.getPrettyJson(resultBatchDatum));
 
         //Build and post contract txn\
         UtxoSelectionStrategy utxoSelectionStrategy = new DefaultUtxoSelectionStrategyImpl(utxoSupplier);
@@ -117,43 +122,52 @@ public class VoteBatcher {
         List<Utxo> scriptUtxos = utxoTuples.stream().map(utxoVoteDatumTuple -> utxoVoteDatumTuple._1)
                 .collect(Collectors.toList());
 
-        ScriptCallContext scriptCallContext = ScriptCallContext
+        List<ScriptCallContext> scriptCallContexts = scriptUtxos.stream().map(utxo -> ScriptCallContext
                 .builder()
                 .script(voteBatcherScript)
+                .utxo(utxo)
                 .exUnits(ExUnits.builder()  //Exact exUnits will be calculated later
                         .mem(BigInteger.valueOf(500000))
                         .steps(BigInteger.valueOf(150000000))
                         .build())
                 .redeemer(plutusObjectConverter.toPlutusData(CreateVoteBatchRedeemer.create()))
-                .redeemerTag(RedeemerTag.Spend).build();
+                .redeemerTag(RedeemerTag.Spend).build()).collect(Collectors.toList());
+
 
         TxBuilder txBuilder = output.outputBuilder()
-                .buildInputs(InputBuilders.createFromUtxos(scriptUtxos))
-                .andThen(CollateralBuilders.collateralOutputs(sender, new ArrayList<>(collateralUtxos))) //CIP-40
-                .andThen(ScriptCallContextProviders.createFromScriptCallContext(scriptCallContext))
-                .andThen((context, txn) -> {
+                .buildInputs(InputBuilders.createFromUtxos(scriptUtxos, sender))
+                .andThen(CollateralBuilders.collateralOutputs(sender, new ArrayList<>(collateralUtxos))); //CIP-40
+
+        //Loop and add scriptCallContexts
+        for (ScriptCallContext scriptCallContext : scriptCallContexts) {
+            txBuilder = txBuilder.andThen(ScriptCallContextProviders.createFromScriptCallContext(scriptCallContext));
+        }
+
+        txBuilder = txBuilder.andThen((context, txn) -> {
                     //Calculate ExUnit. It should be done before balanceTx for accurate fee calculation
                     //update estimate ExUnits
-//                    ExUnits estimatedExUnits;
-//                    try {
-//                        estimatedExUnits = evaluateExUnits(txn);
-//                        txn.getWitnessSet().getRedeemers().get(0).setExUnits(estimatedExUnits);
-//                    } catch (Exception e) {
-//                        throw new ApiRuntimeException("Script cost evaluation failed", e);
-//                    }
+                    ExUnits estimatedExUnits;
+                    try {
+                        estimatedExUnits = evaluateExUnits(txn);
+                        txn.getWitnessSet().getRedeemers().get(0).setExUnits(estimatedExUnits);
+                    } catch (Exception e) {
+                        throw new ApiRuntimeException("Script cost evaluation failed", e);
+                    }
 
-//                    txn.getWitnessSet().getPlutusV2Scripts().clear();
+                    //Remove all scripts from witness and just add one
+                    txn.getWitnessSet().getPlutusV2Scripts().clear();
+                    txn.getWitnessSet().getPlutusV2Scripts().add(plutusScriptUtil.getVoteBatcherContract());
                 })
                 .andThen(BalanceTxBuilders.balanceTx(sender, 1));
 
-        Transaction transaction = TxBuilderContext.init(utxoSupplier, protocolParamsSupplier)
-                .buildAndSign(txBuilder, operatorAccountProvider.getTxSigner());
+        TxBuilderContext txBuilderContext = TxBuilderContext.init(utxoSupplier, protocolParamsSupplier);
+        Transaction transaction = txBuilderContext.buildAndSign(txBuilder, operatorAccountProvider.getTxSigner());
 
         Result<String> result = transactionProcessor.submitTransaction(transaction.serialize());
         if (!result.isSuccessful())
             throw new RuntimeException("Transaction failed. " + result.getResponse());
         else
-            log.info("Import Transaction Id : " + result.getValue());
+            log.info("Vote Batcher Transaction Id : " + result.getValue());
 
         transactionUtil.waitForTransaction(result);
 

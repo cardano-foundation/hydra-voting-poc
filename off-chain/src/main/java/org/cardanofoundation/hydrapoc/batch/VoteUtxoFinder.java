@@ -36,8 +36,9 @@ public class VoteUtxoFinder {
         }
         boolean isContinue = true;
         List<Tuple<Utxo, VoteDatum>> utxos = new ArrayList<>();
+        int page = 0;
         while (isContinue) {
-            List<Utxo> utxoList = utxoSupplier.getPage(voteBatchContractAddress, batchSize, 0, OrderEnum.asc);
+            List<Utxo> utxoList = utxoSupplier.getPage(voteBatchContractAddress, batchSize, page++, OrderEnum.asc);
             if (utxoList.size() == 0) {
                 isContinue = false;
                 continue;
@@ -47,7 +48,7 @@ public class VoteUtxoFinder {
                     .filter(utxo -> StringUtils.hasLength(utxo.getInlineDatum()))
                     .map(utxo -> {
                         Optional<VoteDatum> voteDatum = VoteDatum.deserialize(HexUtil.decodeHexString(utxo.getInlineDatum()));
-                        return new Tuple<>(utxo, voteDatum.get());
+                        return new Tuple<>(utxo, voteDatum.orElse(null));
                     })
                     .filter(utxoOptionalTuple -> utxoOptionalTuple._2 != null)
                     .collect(Collectors.toList());

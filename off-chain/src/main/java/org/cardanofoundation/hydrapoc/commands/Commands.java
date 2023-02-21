@@ -2,6 +2,7 @@ package org.cardanofoundation.hydrapoc.commands;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.cardanofoundation.hydrapoc.batch.VoteBatcher;
 import org.cardanofoundation.hydrapoc.generator.RandomVoteGenerator;
 import org.cardanofoundation.hydrapoc.model.Vote;
 import org.cardanofoundation.hydrapoc.importvote.VoteImporter;
@@ -20,6 +21,7 @@ public class Commands {
 
     private final RandomVoteGenerator randomVoteGenerator;
     private final VoteImporter voteImporter;
+    private final VoteBatcher voteBatcher;
 
     @Value("${import.interval:1000}")
     private long importInterval;
@@ -48,5 +50,10 @@ public class Commands {
         }
 
         return txIds;
+    }
+
+    @ShellMethod(value = "Create Batch")
+    public void createBatch(@ShellOption int batchSize) throws Exception {
+        voteBatcher.createAndPostBatchTransaction(batchSize);
     }
 }

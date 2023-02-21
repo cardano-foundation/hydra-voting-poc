@@ -1,7 +1,9 @@
 package org.cardanofoundation.hydrapoc;
 
 import com.bloxbean.cardano.client.api.model.Utxo;
+import com.bloxbean.cardano.client.util.HexUtil;
 import com.bloxbean.cardano.client.util.Tuple;
+import org.cardanofoundation.hydrapoc.batch.ResultBatchDatum;
 import org.cardanofoundation.hydrapoc.batch.VoteBatcher;
 import org.cardanofoundation.hydrapoc.batch.VoteUtxoFinder;
 import org.cardanofoundation.hydrapoc.commands.Commands;
@@ -37,12 +39,12 @@ class HydraVoteImporterApplicationTests {
 
     @Test
     public void generateVotes() throws Exception {
-        generateVotes.generateVotes(50, 300, "votes.json");
+        generateVotes.generateVotes(10, 30, "votes.json");
     }
 
     @Test
     public void importVotesCmd() throws Exception {
-        List<String> txIds = generateVotes.importVotes(0, 90, "votes.json");
+        List<String> txIds = generateVotes.importVotes(0, 10, "votes.json");
         System.out.println(txIds);
     }
 
@@ -55,6 +57,13 @@ class HydraVoteImporterApplicationTests {
     @Test
     public void createAndPostBatch() throws Exception {
         voteBatcher.createAndPostBatchTransaction(20);
+    }
+
+    @Test
+    public void readVoteResultDatum() {
+        String resultDatum = "d8799fa2d8799f1a0184abe81a00047187ffd8799f001a009190fb00ffd8799f1a0fbb60ad1a0004320fffd8799f1a00754f980000ffff";
+        ResultBatchDatum resultBatchDatum = ResultBatchDatum.deserialize(HexUtil.decodeHexString(resultDatum)).get();
+        System.out.println(resultBatchDatum);
     }
 
 }

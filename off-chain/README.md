@@ -35,6 +35,10 @@ bf.project_id=<Blockfrost project id>
 
 operator.mnemonic=<24 words mnemonic for sender's account>
 
+# settings for random vote generation
+proposals.per.challenge=3
+total.challenges=2
+
 ```
 
 
@@ -59,4 +63,10 @@ shell:> generate-votes --nVoters 20 --nVotes 1000 --outFile votes.json
 
 ```shell
 shell:>import-votes --batchSize 100 --startIndex 0 --voteFile votes.json
+```
+
+### To create a vote batch
+
+```shell
+shell> create-batch --batchSize 10
 ```
