@@ -8,6 +8,7 @@ import com.bloxbean.cardano.client.util.HexUtil;
 import com.bloxbean.cardano.client.util.Tuple;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.cardanofoundation.hydrapoc.batch.data.output.ResultBatchDatum;
 import org.cardanofoundation.hydrapoc.commands.PlutusScriptUtil;
 import org.cardanofoundation.hydrapoc.importvote.VoteDatum;
 import org.springframework.stereotype.Component;
@@ -49,6 +50,42 @@ public class VoteUtxoFinder {
                     .map(utxo -> {
                         Optional<VoteDatum> voteDatum = VoteDatum.deserialize(HexUtil.decodeHexString(utxo.getInlineDatum()));
                         return new Tuple<>(utxo, voteDatum.orElse(null));
+                    })
+                    .filter(utxoOptionalTuple -> utxoOptionalTuple._2 != null)
+                    .collect(Collectors.toList());
+
+            utxos.addAll(utxoTuples);
+            if (utxoTuples.size() >= batchSize)
+                isContinue = false;
+        }
+
+        log.info(utxos.toString());
+        return utxos;
+    }
+
+    public List<Tuple<Utxo, ResultBatchDatum>> getUtxosWithVoteBatches(int batchSize) {
+        String voteBatchContractAddress = null;
+        try {
+            voteBatchContractAddress = plutusScriptUtil.getVoteBatcherContractAddress();
+        } catch (CborSerializationException e) {
+            log.error("Error", e);
+            return Collections.EMPTY_LIST;
+        }
+        boolean isContinue = true;
+        List<Tuple<Utxo, ResultBatchDatum>> utxos = new ArrayList<>();
+        int page = 0;
+        while (isContinue) {
+            List<Utxo> utxoList = utxoSupplier.getPage(voteBatchContractAddress, batchSize, page++, OrderEnum.asc);
+            if (utxoList.size() == 0) {
+                isContinue = false;
+                continue;
+            }
+
+            List<Tuple<Utxo, ResultBatchDatum>> utxoTuples = utxoList.stream()
+                    .filter(utxo -> StringUtils.hasLength(utxo.getInlineDatum()))
+                    .map(utxo -> {
+                        Optional<ResultBatchDatum> resultBatchDatumOptional = ResultBatchDatum.deserialize(HexUtil.decodeHexString(utxo.getInlineDatum()));
+                        return new Tuple<>(utxo, resultBatchDatumOptional.orElse(null));
                     })
                     .filter(utxoOptionalTuple -> utxoOptionalTuple._2 != null)
                     .collect(Collectors.toList());

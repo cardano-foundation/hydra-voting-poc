@@ -28,14 +28,11 @@ import com.bloxbean.cardano.client.util.JsonUtil;
 import com.bloxbean.cardano.client.util.Tuple;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.cardanofoundation.hydrapoc.batch.data.output.ChallengeProposalDatum;
-import org.cardanofoundation.hydrapoc.batch.data.input.CreateVoteBatchRedeemer;
+import org.cardanofoundation.hydrapoc.batch.data.input.ReduceVoteBatchRedeemer;
 import org.cardanofoundation.hydrapoc.batch.data.output.ResultBatchDatum;
-import org.cardanofoundation.hydrapoc.batch.data.output.ResultDatum;
 import org.cardanofoundation.hydrapoc.commands.PlutusScriptUtil;
 import org.cardanofoundation.hydrapoc.commands.TransactionUtil;
 import org.cardanofoundation.hydrapoc.common.OperatorAccountProvider;
-import org.cardanofoundation.hydrapoc.importvote.VoteDatum;
 import org.springframework.stereotype.Component;
 
 import java.math.BigInteger;
@@ -47,11 +44,12 @@ import java.util.stream.Collectors;
 
 import static com.bloxbean.cardano.client.common.ADAConversionUtil.adaToLovelace;
 import static com.bloxbean.cardano.client.common.CardanoConstants.LOVELACE;
+import static org.cardanofoundation.hydrapoc.batch.util.CountVoteUtil.groupResultBatchDatum;
 
 @Component
 @RequiredArgsConstructor
 @Slf4j
-public class VoteBatcher {
+public class VoteBatchReducer {
     private final UtxoSupplier utxoSupplier;
     private final ProtocolParamsSupplier protocolParamsSupplier;
     private final TransactionProcessor transactionProcessor;
@@ -64,57 +62,34 @@ public class VoteBatcher {
     private PlutusObjectConverter plutusObjectConverter = new DefaultPlutusObjectConverter();
 
     //TODO -- check collateral return when new utxo added during balanceTx
-    public String createAndPostBatchTransaction(int batchSize) throws Exception {
+    public String postReduceBatchTransaction(int batchSize) throws Exception {
         PlutusV2Script voteBatcherScript = plutusScriptUtil.getVoteBatcherContract();
         String voteBatcherScriptAddress = plutusScriptUtil.getVoteBatcherContractAddress();
         String sender = operatorAccountProvider.getOperatorAddress();
         log.info("Sender Address: " + sender);
         log.info("Script Address: " + voteBatcherScriptAddress);
 
-        List<Tuple<Utxo, VoteDatum>> utxoTuples = voteUtxoFinder.getUtxosWithVotes(batchSize);
+        List<Tuple<Utxo, ResultBatchDatum>> utxoTuples = voteUtxoFinder.getUtxosWithVoteBatches(batchSize);
         if (utxoTuples.size() == 0) {
             log.warn("No utxo found");
             return null;
         }
 
-        ResultBatchDatum resultBatchDatum = new ResultBatchDatum();
-        for (Tuple<Utxo, VoteDatum> tuple : utxoTuples) {
-            VoteDatum voteDatum = tuple._2;
-            ChallengeProposalDatum challengeProposalDatum =
-                    new ChallengeProposalDatum(voteDatum.getChallenge(), voteDatum.getProposal());
+        //Calculate group result batch datum
+        ResultBatchDatum reduceVoteBatchDatum = groupResultBatchDatum(utxoTuples);
 
-            ResultDatum resultDatum = resultBatchDatum.get(challengeProposalDatum);
-            if (resultDatum == null) {
-                resultDatum = new ResultDatum();
-                resultBatchDatum.add(challengeProposalDatum, resultDatum);
-            }
+        log.info("############# Input Vote Batches ############");
+        log.info(JsonUtil.getPrettyJson(utxoTuples.stream().map(utxoVoteBatch -> utxoVoteBatch._2).collect(Collectors.toList())));
+        log.info("########### Reduced Result Datum #############");
+        log.info(JsonUtil.getPrettyJson(reduceVoteBatchDatum));
 
-            switch (voteDatum.getChoice()) {
-                case 0:
-                    resultDatum.setAbstain(resultDatum.getAbstain() + voteDatum.getVotingPower());
-                    break;
-                case 1:
-                    resultDatum.setNo(resultDatum.getNo() + voteDatum.getVotingPower());
-                    break;
-                case 2:
-                    resultDatum.setYes(resultDatum.getYes() + voteDatum.getVotingPower());
-                    break;
-                default:
-                    log.warn("Invalid vote, " + voteDatum.getChoice());
-            }
-        }
-        log.info("############# Input Votes ############");
-        log.info(JsonUtil.getPrettyJson(utxoTuples.stream().map(utxoVoteDatumTuple -> utxoVoteDatumTuple._2).collect(Collectors.toList())));
-        log.info("########### Result Datum #############");
-        log.info(JsonUtil.getPrettyJson(resultBatchDatum));
-
-        //Build and post contract txn\
+        //Build and post contract txn
         UtxoSelectionStrategy utxoSelectionStrategy = new DefaultUtxoSelectionStrategyImpl(utxoSupplier);
         Set<Utxo> collateralUtxos =
                 utxoSelectionStrategy.select(sender, new Amount(LOVELACE, adaToLovelace(10)), Collections.emptySet());
 
         //Build the expected output
-        PlutusData outputDatum = plutusObjectConverter.toPlutusData(resultBatchDatum);
+        PlutusData outputDatum = plutusObjectConverter.toPlutusData(reduceVoteBatchDatum);
         Output output = Output.builder()
                 .address(voteBatcherScriptAddress)
                 .datum(outputDatum)
@@ -134,7 +109,7 @@ public class VoteBatcher {
                         .mem(BigInteger.valueOf(500000))
                         .steps(BigInteger.valueOf(150000000))
                         .build())
-                .redeemer(plutusObjectConverter.toPlutusData(CreateVoteBatchRedeemer.create()))
+                .redeemer(plutusObjectConverter.toPlutusData(ReduceVoteBatchRedeemer.create()))
                 .redeemerTag(RedeemerTag.Spend).build()).collect(Collectors.toList());
 
 
@@ -171,7 +146,7 @@ public class VoteBatcher {
         if (!result.isSuccessful())
             throw new RuntimeException("Transaction failed. " + result.getResponse());
         else
-            log.info("Vote Batcher Transaction Id : " + result.getValue());
+            log.info("Reduce Vote Batcher Transaction Id : " + result.getValue());
 
         transactionUtil.waitForTransaction(result);
 

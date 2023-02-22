@@ -1,10 +1,11 @@
-package org.cardanofoundation.hydrapoc.batch;
+package org.cardanofoundation.hydrapoc.batch.data.output;
 
 import com.bloxbean.cardano.client.plutus.annotation.Constr;
 import com.bloxbean.cardano.client.plutus.annotation.PlutusField;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
+import lombok.NonNull;
 import lombok.extern.slf4j.Slf4j;
 
 @Data
@@ -27,5 +28,15 @@ public class ResultDatum {
 
     public ResultDatum() {
 
+    }
+
+    /**
+     * Add values in resultDatum to this {@link ResultDatum}
+     * @param resultDatum
+     */
+    public void add(@NonNull ResultDatum resultDatum) {
+        this.yes = resultDatum.getYes();
+        this.no = resultDatum.getNo();
+        this.abstain = resultDatum.getAbstain();
     }
 }

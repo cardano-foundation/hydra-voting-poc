@@ -1,4 +1,4 @@
-package org.cardanofoundation.hydrapoc.batch;
+package org.cardanofoundation.hydrapoc.batch.data.input;
 
 import com.bloxbean.cardano.client.crypto.Blake2bUtil;
 import com.bloxbean.cardano.client.crypto.KeyGenUtil;

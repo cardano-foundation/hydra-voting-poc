@@ -60,7 +60,7 @@ public class VoteDatum {
                     .choice(choice)
                     .build());
         } catch (Exception e) {
-            log.error("Error in deserialization (VoteDatum)", e);
+            log.trace("Error in deserialization (VoteDatum)", e);
             return Optional.empty();
         }
     }

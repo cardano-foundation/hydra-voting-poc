@@ -1,4 +1,4 @@
-package org.cardanofoundation.hydrapoc.batch;
+package org.cardanofoundation.hydrapoc.batch.data.output;
 
 import com.bloxbean.cardano.client.plutus.annotation.Constr;
 import com.bloxbean.cardano.client.plutus.annotation.PlutusField;

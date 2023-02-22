@@ -1,4 +1,4 @@
-package org.cardanofoundation.hydrapoc.batch;
+package org.cardanofoundation.hydrapoc.batch.data.output;
 
 import com.bloxbean.cardano.client.exception.CborDeserializationException;
 import com.bloxbean.cardano.client.plutus.annotation.Constr;
@@ -58,8 +58,8 @@ public class ResultBatchDatum {
             }
 
             return Optional.of(resultBatchDatum);
-        } catch (CborDeserializationException e) {
-            log.error("Error in deserialization (VoteDatum)", e);
+        } catch (Exception e) {
+            log.trace("Error in deserialization (VoteDatum)", e);
             return Optional.empty();
         }
     }
