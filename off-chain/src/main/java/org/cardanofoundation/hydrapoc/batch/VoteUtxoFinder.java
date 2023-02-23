@@ -55,8 +55,10 @@ public class VoteUtxoFinder {
                     .collect(Collectors.toList());
 
             utxos.addAll(utxoTuples);
-            if (utxoTuples.size() >= batchSize)
+            if (utxos.size() >= batchSize) {
+                utxos = utxos.subList(0, batchSize);
                 isContinue = false;
+            }
         }
 
         log.info(utxos.toString());
@@ -91,8 +93,10 @@ public class VoteUtxoFinder {
                     .collect(Collectors.toList());
 
             utxos.addAll(utxoTuples);
-            if (utxoTuples.size() >= batchSize)
+            if (utxos.size() >= batchSize) {
+                utxos = utxos.subList(0, batchSize);
                 isContinue = false;
+            }
         }
 
         log.info(utxos.toString());

@@ -128,7 +128,8 @@ public class VoteBatchReducer {
                     ExUnits estimatedExUnits;
                     try {
                         estimatedExUnits = evaluateExUnits(txn);
-                        txn.getWitnessSet().getRedeemers().get(0).setExUnits(estimatedExUnits);
+                        if (estimatedExUnits != null)
+                            txn.getWitnessSet().getRedeemers().get(0).setExUnits(estimatedExUnits);
                     } catch (Exception e) {
                         throw new ApiRuntimeException("Script cost evaluation failed", e);
                     }

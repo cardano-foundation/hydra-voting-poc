@@ -153,7 +153,8 @@ public class VoteBatcher {
                     ExUnits estimatedExUnits;
                     try {
                         estimatedExUnits = evaluateExUnits(txn);
-                        txn.getWitnessSet().getRedeemers().get(0).setExUnits(estimatedExUnits);
+                        if (estimatedExUnits != null)
+                            txn.getWitnessSet().getRedeemers().get(0).setExUnits(estimatedExUnits);
                     } catch (Exception e) {
                         throw new ApiRuntimeException("Script cost evaluation failed", e);
                     }
@@ -168,9 +169,10 @@ public class VoteBatcher {
         Transaction transaction = txBuilderContext.buildAndSign(txBuilder, operatorAccountProvider.getTxSigner());
 
         Result<String> result = transactionProcessor.submitTransaction(transaction.serialize());
-        if (!result.isSuccessful())
-            throw new RuntimeException("Transaction failed. " + result.getResponse());
-        else
+        if (!result.isSuccessful()) {
+            log.error("Create Vote Batch transaction failed. " + result);
+            return null;
+        } else
             log.info("Vote Batcher Transaction Id : " + result.getValue());
 
         transactionUtil.waitForTransaction(result);

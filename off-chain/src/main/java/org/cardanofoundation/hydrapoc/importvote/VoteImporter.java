@@ -4,6 +4,7 @@ import com.bloxbean.cardano.client.api.ProtocolParamsSupplier;
 import com.bloxbean.cardano.client.api.TransactionProcessor;
 import com.bloxbean.cardano.client.api.UtxoSupplier;
 import com.bloxbean.cardano.client.api.model.Result;
+import com.bloxbean.cardano.client.coinselection.impl.LargestFirstUtxoSelectionStrategy;
 import com.bloxbean.cardano.client.function.TxBuilder;
 import com.bloxbean.cardano.client.function.TxBuilderContext;
 import com.bloxbean.cardano.client.function.TxOutputBuilder;
@@ -98,7 +99,9 @@ public class VoteImporter {
                 .buildInputs(InputBuilders.createFromSender(sender, sender))
                 .andThen(BalanceTxBuilders.balanceTx(sender));
 
-        Transaction transaction = TxBuilderContext.init(utxoSupplier, protocolParamsSupplier)
+        TxBuilderContext txBuilderContext = TxBuilderContext.init(utxoSupplier, protocolParamsSupplier);
+        txBuilderContext.setUtxoSelectionStrategy(new LargestFirstUtxoSelectionStrategy(utxoSupplier));
+        Transaction transaction = txBuilderContext
                 .buildAndSign(txBuilder, operatorAccountProvider.getTxSigner());
 
         Result<String> result = transactionProcessor.submitTransaction(transaction.serialize());
