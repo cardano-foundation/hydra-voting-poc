@@ -58,7 +58,7 @@ type Redeemer {
 // Note:
 // Smart Contract assumes that votes are deduped across all batches
 // otherwise it cannot possibly work because some votes could be counted twice
-validator hydra_voting {
+validator voting {
   fn(_voting_datum: VotingDatum, redeemer: Redeemer, sc: ScriptContext) -> Bool {
     // we lock votes with 0 ADA into smart contract address (off chain)
     expect Spend(_or) = sc.purpose
