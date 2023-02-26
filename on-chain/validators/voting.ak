@@ -8,8 +8,6 @@ use voting/challenge_proposal.{Challenge, ChallengeProposal, Proposal}
 
 // TODO
 // 1. add merkle tree to validate votes
-// 2. support not only inline datums?
-// 3. add ability for all parties to approve vote???
 
 type VotingPower =
   Int
