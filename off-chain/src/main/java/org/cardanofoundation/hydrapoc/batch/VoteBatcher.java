@@ -3,16 +3,12 @@ package org.cardanofoundation.hydrapoc.batch;
 import com.bloxbean.cardano.client.api.ProtocolParamsSupplier;
 import com.bloxbean.cardano.client.api.TransactionProcessor;
 import com.bloxbean.cardano.client.api.UtxoSupplier;
-import com.bloxbean.cardano.client.api.exception.ApiException;
-import com.bloxbean.cardano.client.api.exception.ApiRuntimeException;
 import com.bloxbean.cardano.client.api.model.Amount;
 import com.bloxbean.cardano.client.api.model.Result;
 import com.bloxbean.cardano.client.api.model.Utxo;
 import com.bloxbean.cardano.client.backend.api.TransactionService;
-import com.bloxbean.cardano.client.backend.model.EvaluationResult;
 import com.bloxbean.cardano.client.coinselection.UtxoSelectionStrategy;
 import com.bloxbean.cardano.client.coinselection.impl.DefaultUtxoSelectionStrategyImpl;
-import com.bloxbean.cardano.client.exception.CborSerializationException;
 import com.bloxbean.cardano.client.function.Output;
 import com.bloxbean.cardano.client.function.TxBuilder;
 import com.bloxbean.cardano.client.function.TxBuilderContext;
@@ -24,12 +20,14 @@ import com.bloxbean.cardano.client.function.helper.model.ScriptCallContext;
 import com.bloxbean.cardano.client.plutus.api.PlutusObjectConverter;
 import com.bloxbean.cardano.client.plutus.impl.DefaultPlutusObjectConverter;
 import com.bloxbean.cardano.client.transaction.spec.*;
+import com.bloxbean.cardano.client.transaction.util.CostModelUtil;
 import com.bloxbean.cardano.client.util.JsonUtil;
 import com.bloxbean.cardano.client.util.Tuple;
+import com.bloxbean.cardano.tx.evaluator.TxEvaluator;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.cardanofoundation.hydrapoc.batch.data.output.ChallengeProposalDatum;
 import org.cardanofoundation.hydrapoc.batch.data.input.CreateVoteBatchRedeemer;
+import org.cardanofoundation.hydrapoc.batch.data.output.ChallengeProposalDatum;
 import org.cardanofoundation.hydrapoc.batch.data.output.ResultBatchDatum;
 import org.cardanofoundation.hydrapoc.batch.data.output.ResultDatum;
 import org.cardanofoundation.hydrapoc.commands.PlutusScriptUtil;
@@ -108,12 +106,12 @@ public class VoteBatcher {
         log.info("########### Result Datum #############");
         log.info(JsonUtil.getPrettyJson(resultBatchDatum));
 
-        //Build and post contract txn\
+        // Build and post contract txn\
         UtxoSelectionStrategy utxoSelectionStrategy = new DefaultUtxoSelectionStrategyImpl(utxoSupplier);
         Set<Utxo> collateralUtxos =
                 utxoSelectionStrategy.select(sender, new Amount(LOVELACE, adaToLovelace(10)), Collections.emptySet());
 
-        //Build the expected output
+        // Build the expected output
         PlutusData outputDatum = plutusObjectConverter.toPlutusData(resultBatchDatum);
         Output output = Output.builder()
                 .address(voteBatcherScriptAddress)
@@ -131,8 +129,8 @@ public class VoteBatcher {
                 .script(voteBatcherScript)
                 .utxo(utxo)
                 .exUnits(ExUnits.builder()  //Exact exUnits will be calculated later
-                        .mem(BigInteger.valueOf(500000))
-                        .steps(BigInteger.valueOf(150000000))
+                        .mem(BigInteger.valueOf(0))
+                        .steps(BigInteger.valueOf(0))
                         .build())
                 .redeemer(plutusObjectConverter.toPlutusData(CreateVoteBatchRedeemer.create()))
                 .redeemerTag(RedeemerTag.Spend).build()).collect(Collectors.toList());
@@ -148,18 +146,19 @@ public class VoteBatcher {
         }
 
         txBuilder = txBuilder.andThen((context, txn) -> {
-                    //Calculate ExUnit. It should be done before balanceTx for accurate fee calculation
-                    //update estimate ExUnits
-                    ExUnits estimatedExUnits;
-                    try {
-                        estimatedExUnits = evaluateExUnits(txn);
-                        if (estimatedExUnits != null)
-                            txn.getWitnessSet().getRedeemers().get(0).setExUnits(estimatedExUnits);
-                    } catch (Exception e) {
-                        throw new ApiRuntimeException("Script cost evaluation failed", e);
+                    TxEvaluator txEvaluator = new TxEvaluator(context.getUtxos());
+                    CostMdls costMdls = new CostMdls();
+                    costMdls.add(CostModelUtil.getCostModelFromProtocolParams(protocolParamsSupplier.getProtocolParams(), Language.PLUTUS_V2).orElseThrow());
+                    List<Redeemer> evalReedemers = txEvaluator.evaluateTx(txn, costMdls);
+
+                    List<Redeemer> redeemers = txn.getWitnessSet().getRedeemers();
+                    for (Redeemer redeemer : redeemers) { //Update costs
+                        evalReedemers.stream().filter(evalReedemer -> evalReedemer.getIndex().equals(redeemer.getIndex()))
+                                .findFirst()
+                                .ifPresent(evalRedeemer -> redeemer.setExUnits(evalRedeemer.getExUnits()));
                     }
 
-                    //Remove all scripts from witness and just add one
+                    // Remove all scripts from witness and just add one
                     txn.getWitnessSet().getPlutusV2Scripts().clear();
                     txn.getWitnessSet().getPlutusV2Scripts().add(plutusScriptUtil.getVoteBatcherContract());
                 })
@@ -178,15 +177,6 @@ public class VoteBatcher {
         transactionUtil.waitForTransaction(result);
 
         return result.getValue();
-    }
-
-    private ExUnits evaluateExUnits(Transaction transaction) throws ApiException, CborSerializationException {
-        Result<List<EvaluationResult>> evalResults = transactionService.evaluateTx(transaction.serialize());
-        if (evalResults.isSuccessful()) {
-            return evalResults.getValue().get(0).getExUnits();
-        } else {
-            return null;
-        }
     }
 
 }

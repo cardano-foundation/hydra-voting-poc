@@ -12,6 +12,7 @@ version = '0.0.1-SNAPSHOT'
 sourceCompatibility = '17'
 
 repositories {
+    mavenLocal()
     mavenCentral()
 }
 
@@ -26,6 +27,7 @@ dependencies {
     implementation 'org.springframework:spring-aspects'
     implementation 'com.bloxbean.cardano:cardano-client-lib:0.4.3'
     implementation 'com.bloxbean.cardano:cardano-client-backend-blockfrost:0.4.3'
+    implementation 'com.bloxbean.cardano:aiken-java-binding:0.0.1-SNAPSHOT'
 
     implementation 'org.projectlombok:lombok:1.18.26'
     annotationProcessor 'org.projectlombok:lombok:1.18.26'

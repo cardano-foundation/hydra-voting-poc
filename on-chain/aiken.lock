@@ -3,11 +3,11 @@
 
 [[requirements]]
 name = "aiken-lang/stdlib"
-version = "288d05b0d1421eafe936010ff96e885164e8a7bd"
+version = "a6bbc331fdc460e5170c4d28b48e69712752d985"
 source = "github"
 
 [[packages]]
 name = "aiken-lang/stdlib"
-version = "288d05b0d1421eafe936010ff96e885164e8a7bd"
+version = "a6bbc331fdc460e5170c4d28b48e69712752d985"
 requirements = []
 source = "github"
