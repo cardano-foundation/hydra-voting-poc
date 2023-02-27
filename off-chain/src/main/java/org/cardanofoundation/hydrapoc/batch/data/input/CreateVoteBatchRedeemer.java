@@ -14,6 +14,7 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @Constr(alternative = 0)
 public class CreateVoteBatchRedeemer {
+
     @PlutusField
     private String id;
 

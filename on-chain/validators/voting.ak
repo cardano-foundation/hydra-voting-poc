@@ -2,9 +2,13 @@ use aiken/dict.{Dict}
 use aiken/hash.{Blake2b_224, Hash}
 use aiken/list
 use aiken/option
-use aiken/transaction.{Datum, InlineDatum, Input, Output, ScriptContext, Spend}
+use aiken/transaction.{
+  Datum, InlineDatum, Input, Output, OutputReference, ScriptContext, Spend,
+}
+use aiken/transaction/credential.{ScriptCredential}
 use voting/address.{PubKeyHash}
 use voting/challenge_proposal.{Challenge, ChallengeProposal, Proposal}
+use voting/validators
 
 // TODO
 // 1. add merkle tree to validate votes
@@ -53,6 +57,7 @@ type Redeemer {
     // id = in fact merkle root hash
     id: Hash<Blake2b_224, String>,
   }
+  ReduceVoteBatch { id: Hash<Blake2b_224, String> }
 }
 
 // Note:
@@ -61,32 +66,70 @@ type Redeemer {
 validator voting {
   fn(_voting_datum: VotingDatum, redeemer: Redeemer, sc: ScriptContext) -> Bool {
     // we lock votes with 0 ADA into smart contract address (off chain)
-    expect Spend(_or) = sc.purpose
+    expect Spend(output_reference) = sc.purpose
 
     when redeemer is {
       CreateVoteBatch { id } -> {
         // we sum all votes and output in the ResultsBatchDatum
         // and somehow verify id of the batch and total votes in the batch
         // alternatively use normal inputs
-        let votes: List<Vote> = get_votes_from_inputs(sc.transaction.inputs)
+        let inputs: List<Input> = sc.transaction.inputs
+        let outputs: List<Output> = sc.transaction.outputs
+        let votes: List<Vote> = get_votes_from_inputs(inputs)
         let results: Dict<ChallengeProposal, Result> = count_votes(votes)
         // now we need to check if any of the output UTxOs contains results
         // now we have to check if batch_id matches
-        results_must_match(results: results, outputs: sc.transaction.outputs) && batch_id_must_match(
-          votes,
-          id,
+        results_must_match(
+          expected_results: results,
+          outputs: sc.transaction.outputs,
+        ) && batch_id_must_match(votes, id) && result_sent_to_own_address_match(
+          inputs,
+          outputs,
+          results,
+          output_reference,
         )
       }
+      ReduceVoteBatch { id: _id } ->
+        // take existing results and compress them, into one
+        // this operation is fully recursive but we need sequence number to know how deeply nested we are
+        //first we handle only seq = 0
+        // then seq = 1
+        True
+      // TODO check if we are sending results back to the same contract address (validator address)
       _ -> False
     }
   }
 }
 
-fn results_must_match(
+fn result_sent_to_own_address_match(
+  inputs: List<Input>,
+  outputs: List<Output>,
   results: Dict<ChallengeProposal, Result>,
+  output_reference: OutputReference,
+) {
+  let validator_hash =
+    validators.own_validator_script_address_hash(inputs, output_reference)
+
+  let expected_results_datum = ResultsBatchDatum { results }
+  let expected_results_data: Data = expected_results_datum
+
+  list.any(
+    outputs,
+    fn(output) {
+      expect ScriptCredential(output_script_hash) =
+        output.address.payment_credential
+      expect InlineDatum(output_results_data) = output.datum
+
+      output_script_hash == validator_hash && output_results_data == expected_results_data
+    },
+  )
+}
+
+fn results_must_match(
+  expected_results: Dict<ChallengeProposal, Result>,
   outputs: List<Output>,
 ) -> Bool {
-  let expected_results_datum = ResultsBatchDatum { results }
+  let expected_results_datum = ResultsBatchDatum { results: expected_results }
 
   list.any(
     outputs,

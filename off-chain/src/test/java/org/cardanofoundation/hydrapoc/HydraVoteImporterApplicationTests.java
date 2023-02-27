@@ -48,13 +48,13 @@ class HydraVoteImporterApplicationTests {
     //1. Generate 20 votes
     @Test
     public void generateVotes() throws Exception {
-        command.generateVotes(3, 20, "votes.json");
+        command.generateVotes(3, 15, "votes.json");
     }
 
     //2. Import 20 votes from votes.json to script address
     @Test
     public void importVotesFromFile() throws Exception {
-        List<Vote> votes = randomVoteGenerator.getVotes(0, 5, "votes.json");
+        List<Vote> votes = randomVoteGenerator.getVotes(0, 20, "votes.json");
         voteImporter.importVotes(votes);
     }
 
@@ -63,13 +63,15 @@ class HydraVoteImporterApplicationTests {
     @Test
     public void createAndPostBatch() throws Exception {
         voteBatcher.createAndPostBatchTransaction(5);
+        voteBatcher.createAndPostBatchTransaction(5);
+        voteBatcher.createAndPostBatchTransaction(5);
     }
 
-    //4. Reduce batch of 5 to 1
+    //4. Reduce batch of 3 to 1
     //Run this test multiple times to reduce batches to 1 batch
     @Test
     public void reduceBatch() throws Exception {
-        voteBatchReducer.postReduceBatchTransaction(5);
+        voteBatchReducer.postReduceBatchTransaction(3);
     }
 
     @Test
