@@ -64,20 +64,19 @@ validator voting {
     expect Spend(_or) = sc.purpose
 
     when redeemer is {
-      CreateVoteBatch { id: _id } -> {
+      CreateVoteBatch { id } -> {
         // we sum all votes and output in the ResultsBatchDatum
         // and somehow verify id of the batch and total votes in the batch
         // alternatively use normal inputs
         let votes: List<Vote> = get_votes_from_inputs(sc.transaction.inputs)
         let results: Dict<ChallengeProposal, Result> = count_votes(votes)
-        dict.size(results) == 5
+        // now we need to check if any of the output UTxOs contains results
+        // now we have to check if batch_id matches
+        results_must_match(results: results, outputs: sc.transaction.outputs) && batch_id_must_match(
+          votes,
+          id,
+        )
       }
-      // // now we need to check if any of the output UTxOs contains results
-      // // now we have to check if batch_id matches
-      // results_must_match(results: results, outputs: sc.transaction.outputs) && batch_id_must_match(
-      //   votes,
-      //   id,
-      // )
       _ -> False
     }
   }
@@ -87,15 +86,15 @@ fn results_must_match(
   results: Dict<ChallengeProposal, Result>,
   outputs: List<Output>,
 ) -> Bool {
-  let results_datum = ResultsBatchDatum { results }
+  let expected_results_datum = ResultsBatchDatum { results }
 
   list.any(
     outputs,
     fn(o) {
       let d: Datum = o.datum
       let data: Data = get_data_from_datum(d)
-      expect res: ResultsBatchDatum = data
-      res == results_datum
+      expect given_results_datum: ResultsBatchDatum = data
+      expected_results_datum == given_results_datum
     },
   )
 }
@@ -110,20 +109,20 @@ fn batch_id_must_match(
 
 // gets data from datum
 // Consider using expect to enforce InlineDatum
-fn get_data_from_datum(d: Datum) -> Option<Data> {
-  when d is {
-    InlineDatum(id) -> Some(id)
-    _ -> None
-  }
+fn get_data_from_datum(d: Datum) -> Data {
+  expect InlineDatum(id) = d
+
+  id
 }
 
 fn get_votes_from_inputs(inputs: List<Input>) -> List<Vote> {
-  list.map(inputs, fn(i) { i.output.datum })
-  |> list.filter_map(fn(d) { get_data_from_datum(d) })
-  |> list.map(
-    fn(d) {
-      // casting to Vote
+  list.map(
+    inputs,
+    fn(i) {
+      let datum = i.output.datum
+      let d = get_data_from_datum(datum)
       expect v: Vote = d
+
       v
     },
   )
