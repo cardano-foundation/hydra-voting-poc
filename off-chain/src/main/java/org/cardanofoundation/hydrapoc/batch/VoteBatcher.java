@@ -141,7 +141,7 @@ public class VoteBatcher {
                 .andThen(CollateralBuilders.collateralOutputs(sender, new ArrayList<>(collateralUtxos))); //CIP-40
 
         //Loop and add scriptCallContexts
-        for (ScriptCallContext scriptCallContext : scriptCallContexts) {
+        for (var scriptCallContext : scriptCallContexts) {
             txBuilder = txBuilder.andThen(ScriptCallContextProviders.createFromScriptCallContext(scriptCallContext));
         }
 
@@ -169,10 +169,10 @@ public class VoteBatcher {
 
         Result<String> result = transactionProcessor.submitTransaction(transaction.serialize());
         if (!result.isSuccessful()) {
-            log.error("Create Vote Batch transaction failed. " + result);
-            return null;
-        } else
-            log.info("Vote Batcher Transaction Id : " + result.getValue());
+            throw new RuntimeException("Transaction failed. " + result.getResponse());
+        }
+
+        log.info("Vote Batcher Transaction Id : " + result.getValue());
 
         transactionUtil.waitForTransaction(result);
 

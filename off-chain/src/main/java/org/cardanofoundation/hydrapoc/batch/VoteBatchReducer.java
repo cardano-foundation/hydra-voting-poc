@@ -81,12 +81,12 @@ public class VoteBatchReducer {
         log.info("########### Reduced Result Datum #############");
         log.info(JsonUtil.getPrettyJson(reduceVoteBatchDatum));
 
-        //Build and post contract txn
+        // Build and post contract txn
         UtxoSelectionStrategy utxoSelectionStrategy = new DefaultUtxoSelectionStrategyImpl(utxoSupplier);
         Set<Utxo> collateralUtxos =
                 utxoSelectionStrategy.select(sender, new Amount(LOVELACE, adaToLovelace(10)), Collections.emptySet());
 
-        //Build the expected output
+        // Build the expected output
         PlutusData outputDatum = plutusObjectConverter.toPlutusData(reduceVoteBatchDatum);
         Output output = Output.builder()
                 .address(voteBatcherScriptAddress)
@@ -103,7 +103,7 @@ public class VoteBatchReducer {
                 .builder()
                 .script(voteBatcherScript)
                 .utxo(utxo)
-                .exUnits(ExUnits.builder()  //Exact exUnits will be calculated later
+                .exUnits(ExUnits.builder()  // Exact exUnits will be calculated later
                         .mem(BigInteger.valueOf(0))
                         .steps(BigInteger.valueOf(0))
                         .build())
@@ -127,13 +127,13 @@ public class VoteBatchReducer {
                     List<Redeemer> evalReedemers = txEvaluator.evaluateTx(txn, costMdls);
 
                     List<Redeemer> redeemers = txn.getWitnessSet().getRedeemers();
-                    for (Redeemer redeemer : redeemers) { //Update costs
+                    for (Redeemer redeemer : redeemers) { // Update costs
                         evalReedemers.stream().filter(evalReedemer -> evalReedemer.getIndex().equals(redeemer.getIndex()))
                                 .findFirst()
                                 .ifPresent(evalRedeemer -> redeemer.setExUnits(evalRedeemer.getExUnits()));
                     }
 
-                    //Remove all scripts from witness and just add one
+                    // Remove all scripts from witness and just add one
                     txn.getWitnessSet().getPlutusV2Scripts().clear();
                     txn.getWitnessSet().getPlutusV2Scripts().add(plutusScriptUtil.getVoteBatcherContract());
                 })
