@@ -47,9 +47,9 @@ public class VoteImporter {
 
     private PlutusObjectConverter plutusObjectConverter = new DefaultPlutusObjectConverter();
 
-    @Retryable(include = {RuntimeException.class},
-            maxAttempts = 3,
-            backoff = @Backoff(delay = 10000))
+//    @Retryable(include = {RuntimeException.class},
+//            maxAttempts = 3,
+//            backoff = @Backoff(delay = 10000))
     public String importVotes(Collection<Vote> votes) throws Exception {
         return createTransactionWithDatum(votes);
     }

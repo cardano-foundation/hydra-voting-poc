@@ -18,17 +18,14 @@ public class AppConfiguration {
     @Value("${cardano.network}")
     private String network;
 
+    @Value("${bf.api.url}")
+    private String bfUrl;
+
     @Value("${bf.project_id}")
     private String bfProjectId;
 
     @Bean
     public BackendService getBackendService() {
-        String bfUrl = null;
-        if ("preprod".equals(network))
-            bfUrl = Constants.BLOCKFROST_PREPROD_URL;
-        else if ("mainnet".equals(network))
-            bfUrl = Constants.BLOCKFROST_MAINNET_URL;
-
         return new BFBackendService(bfUrl, bfProjectId);
     }
 
