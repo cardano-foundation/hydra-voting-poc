@@ -54,7 +54,7 @@ class HydraVoteImporterApplicationTests {
     //2. Import 20 votes from votes.json to script address
     @Test
     public void importVotesFromFile() throws Exception {
-        List<Vote> votes = randomVoteGenerator.getVotes(0, 20, "votes.json");
+        List<Vote> votes = randomVoteGenerator.getVotes(0, 15, "votes.json");
         voteImporter.importVotes(votes);
     }
 

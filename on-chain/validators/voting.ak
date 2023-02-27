@@ -133,10 +133,10 @@ fn results_must_match(
 
   list.any(
     outputs,
-    fn(o) {
-      let d: Datum = o.datum
-      let data: Data = get_data_from_datum(d)
-      expect given_results_datum: ResultsBatchDatum = data
+    fn(output) {
+      expect InlineDatum(given_results_data) = output.datum
+      expect given_results_datum: ResultsBatchDatum = given_results_data
+
       expected_results_datum == given_results_datum
     },
   )
@@ -153,9 +153,9 @@ fn batch_id_must_match(
 // gets data from datum
 // Consider using expect to enforce InlineDatum
 fn get_data_from_datum(d: Datum) -> Data {
-  expect InlineDatum(id) = d
+  expect InlineDatum(some_data) = d
 
-  id
+  some_data
 }
 
 fn get_votes_from_inputs(inputs: List<Input>) -> List<Vote> {
@@ -163,10 +163,10 @@ fn get_votes_from_inputs(inputs: List<Input>) -> List<Vote> {
     inputs,
     fn(i) {
       let datum = i.output.datum
-      let d = get_data_from_datum(datum)
-      expect v: Vote = d
+      expect InlineDatum(some_data) = datum
+      expect vote: Vote = some_data
 
-      v
+      vote
     },
   )
 }
