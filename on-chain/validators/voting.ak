@@ -12,6 +12,8 @@ use voting/validators
 
 // TODO
 // 1. add merkle tree to validate votes
+// 2. What shall we call datums and what not???
+// 3. Reduce vote batches redeemer
 
 type VotingPower =
   Int
@@ -65,7 +67,7 @@ type Redeemer {
 // otherwise it cannot possibly work because some votes could be counted twice
 validator voting {
   fn(_voting_datum: VotingDatum, redeemer: Redeemer, sc: ScriptContext) -> Bool {
-    // we lock votes with 0 ADA into smart contract address (off chain)
+    // On L2 (Hydra) one will typically lock votes with 0 ADA but on L1 of course each eUTxO is guarded by ca. 1,7 ADA
     expect Spend(output_reference) = sc.purpose
 
     when redeemer is {
@@ -89,13 +91,22 @@ validator voting {
           output_reference,
         )
       }
-      ReduceVoteBatch { id: _id } ->
+      ReduceVoteBatch { id: _id } -> {
+        // collect results from all inputs (fail if there are still votes in smart contract)
+        let inputs: List<Input> = sc.transaction.inputs
+        let all_results: List<ResultsBatchDatum> =
+          get_vote_results_from_inputs(inputs)
         // take existing results and compress them, into one
-        // this operation is fully recursive but we need sequence number to know how deeply nested we are
-        //first we handle only seq = 0
-        // then seq = 1
-        True
-      // TODO check if we are sending results back to the same contract address (validator address)
+        let one_final_result: ResultsBatchDatum =
+          count_vote_results(all_results)
+        // check if resulting output datum contains votes counted up properly
+        // todo
+        // check if we are one final vote results are sent back to the same contract / validator address (reduced)
+        dict.is_empty(one_final_result.results) == False
+      }
+      // TODO: this operation can be fully recursive but we need sequence number to know how deeply nested we are
+      // first we handle only seq = 0
+      // then seq = 1
       _ -> False
     }
   }
@@ -152,14 +163,49 @@ fn batch_id_must_match(
 fn get_votes_from_inputs(inputs: List<Input>) -> List<Vote> {
   list.map(
     inputs,
-    fn(i) {
-      let datum = i.output.datum
-      expect InlineDatum(some_data) = datum
-      expect vote: Vote = some_data
+    fn(input) {
+      expect InlineDatum(vote_data) = input.output.datum
+      expect vote: Vote = vote_data
 
       vote
     },
   )
+}
+
+fn get_vote_results_from_inputs(inputs: List<Input>) -> List<ResultsBatchDatum> {
+  // what to do in case when there are still some votes in smart contract address
+  // should we ignore them or should we simply blow up reduction operation and smart contract fails?
+  // for now we will fail... in fact this is even good because it means there are still votes to reduce
+  list.map(
+    inputs,
+    fn(input) {
+      expect InlineDatum(vote_results_data) = input.output.datum
+      expect results_data_datum: ResultsBatchDatum = vote_results_data
+
+      results_data_datum
+    },
+  )
+}
+
+fn count_vote_results(
+  vote_results: List<ResultsBatchDatum>,
+) -> ResultsBatchDatum {
+  let merging_fn: fn(ResultsBatchDatum, ResultsBatchDatum) -> ResultsBatchDatum = fn(
+    rd1: ResultsBatchDatum,
+    rd2: ResultsBatchDatum,
+  ) {
+    ResultsBatchDatum {
+      results: dict.union_with(
+        left: rd1.results,
+        right: rd2.results,
+        with: results_conflict_resolver,
+        compare: challenge_proposal.compare,
+      ),
+    }
+  }
+  let zero = ResultsBatchDatum { results: dict.new() }
+
+  list.foldl(vote_results, merging_fn, zero)
 }
 
 fn do_count_votes(
@@ -172,20 +218,6 @@ fn do_count_votes(
       let fv: FlatVote = to_flat_vote(h)
       let c: Challenge = h.challenge
       let p: Proposal = h.proposal
-      let conflict_resolver_fn: fn(ChallengeProposal, Result, Result) ->
-        Option<Result> = fn(
-        _key: ChallengeProposal,
-        left_value: Result,
-        right_value: Result,
-      ) {
-        let mr: Result =
-          Result {
-            yes: left_value.yes + right_value.yes,
-            no: left_value.no + right_value.no,
-            abstain: left_value.abstain + right_value.abstain,
-          }
-        Some(mr)
-      }
       dict.union_with(
         left: do_count_votes(t, acc),
         right: dict.insert(
@@ -194,11 +226,25 @@ fn do_count_votes(
           value: Result { yes: fv.yes, no: fv.no, abstain: fv.abstain },
           compare: challenge_proposal.compare,
         ),
-        with: conflict_resolver_fn,
+        with: results_conflict_resolver,
         compare: challenge_proposal.compare,
       )
     }
   }
+}
+
+fn results_conflict_resolver(
+  _key: ChallengeProposal,
+  left: Result,
+  right: Result,
+) -> Option<Result> {
+  Some(
+    Result {
+      yes: left.yes + right.yes,
+      no: left.no + right.no,
+      abstain: left.abstain + right.abstain,
+    },
+  )
 }
 
 fn count_votes(votes: List<Vote>) -> Dict<ChallengeProposal, Result> {

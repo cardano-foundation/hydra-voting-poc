@@ -30,6 +30,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 @SpringBootTest
 class HydraVoteImporterApplicationTests {
+
     @Autowired
     private RandomVoteGenerator randomVoteGenerator;
     @Autowired
