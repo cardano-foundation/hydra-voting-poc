@@ -12,6 +12,7 @@ import org.springframework.stereotype.Component;
 
 import java.io.File;
 import java.io.FileOutputStream;
+import java.io.IOException;
 import java.util.*;
 
 @Slf4j
@@ -103,7 +104,7 @@ public class RandomVoteGenerator {
         log.info("Start Index: " + startIndex);
         log.info("End Index: " + (startIndex + batchSize));
         log.info("Reading votes ...");
-        List<Vote> votes = objectMapper.readValue(new File(voteFile), new TypeReference<List<Vote>>() {});
+        List<Vote> votes = getAllVotes(voteFile);
 
         if (startIndex >= votes.size()) {
             return Collections.EMPTY_LIST;
@@ -114,6 +115,10 @@ public class RandomVoteGenerator {
                 return votes.subList(startIndex, startIndex + batchSize);
 
         }
+    }
+
+    public List<Vote> getAllVotes(String voteFile) throws IOException {
+        return objectMapper.readValue(new File(voteFile), new TypeReference<List<Vote>>() {});
     }
 
     public static void main(String[] args) throws Exception {

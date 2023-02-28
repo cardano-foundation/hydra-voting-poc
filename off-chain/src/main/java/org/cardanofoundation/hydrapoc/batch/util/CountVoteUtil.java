@@ -10,12 +10,12 @@ import java.util.stream.Collectors;
 
 public class CountVoteUtil {
 
-    public static ResultBatchDatum groupResultBatchDatumTuples(List<Tuple<Utxo, ResultBatchDatum>> utxoTuples) {
-        return groupResultBatchDatum(utxoTuples.stream().map(t -> t._2).collect(Collectors.toList()));
+    public static ResultBatchDatum groupResultBatchDatumTuples(List<Tuple<Utxo, ResultBatchDatum>> utxoTuples, long iteration) {
+        return groupResultBatchDatum(utxoTuples.stream().map(t -> t._2).collect(Collectors.toList()), iteration);
     }
 
-    public static ResultBatchDatum groupResultBatchDatum(List<ResultBatchDatum> resultBatchData) {
-        ResultBatchDatum groupResultBatchDatum = new ResultBatchDatum();
+    public static ResultBatchDatum groupResultBatchDatum(List<ResultBatchDatum> resultBatchData, long iteration) {
+        ResultBatchDatum groupResultBatchDatum = ResultBatchDatum.empty(iteration);
 
         for (ResultBatchDatum resultBatchDatum : resultBatchData) {
             resultBatchDatum.getResults().forEach((challengeProposalDatum, resultDatum) -> {

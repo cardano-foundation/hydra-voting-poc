@@ -28,6 +28,7 @@ dependencies {
     implementation 'com.bloxbean.cardano:cardano-client-lib:0.4.3'
     implementation 'com.bloxbean.cardano:cardano-client-backend-blockfrost:0.4.3'
     implementation 'com.bloxbean.cardano:aiken-java-binding:0.0.1-SNAPSHOT'
+    implementation("com.google.guava:guava:31.1-jre")
 
     implementation 'org.projectlombok:lombok:1.18.26'
     annotationProcessor 'org.projectlombok:lombok:1.18.26'

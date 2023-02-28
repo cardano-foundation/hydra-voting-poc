@@ -62,8 +62,8 @@ public class Commands {
     }
 
     @ShellMethod(value = "Reduce Batch")
-    public void reduceBatch(@ShellOption int batchSize) throws Exception {
-        voteBatchReducer.postReduceBatchTransaction(batchSize);
+    public void reduceBatch(@ShellOption int batchSize, @ShellOption int iteration) throws Exception {
+        voteBatchReducer.postReduceBatchTransaction(batchSize, iteration);
     }
 
     @ShellMethod(value = "Get vote utxos")

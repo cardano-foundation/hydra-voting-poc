@@ -18,11 +18,14 @@ public class ReduceVoteBatchRedeemer {
     @PlutusField
     private String id;
 
-    public static ReduceVoteBatchRedeemer create() {
+    @PlutusField
+    private long iteration;
+
+    public static ReduceVoteBatchRedeemer create(long iteration) {
         try {
-            byte[] bytes = KeyGenUtil.generateKey().getVkey().getBytes(); //any random bytes
+            byte[] bytes = KeyGenUtil.generateKey().getVkey().getBytes(); // any random bytes
             String id = HexUtil.encodeHexString(Blake2bUtil.blake2bHash224(bytes));
-            return new ReduceVoteBatchRedeemer(id);
+            return new ReduceVoteBatchRedeemer(id, iteration);
         } catch (Exception e) {
             throw new RuntimeException("Create failed", e);
         }

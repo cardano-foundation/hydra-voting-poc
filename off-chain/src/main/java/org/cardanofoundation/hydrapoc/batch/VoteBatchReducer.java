@@ -61,7 +61,7 @@ public class VoteBatchReducer {
     private PlutusObjectConverter plutusObjectConverter = new DefaultPlutusObjectConverter();
 
     //TODO -- check collateral return when new utxo added during balanceTx
-    public String postReduceBatchTransaction(int batchSize) throws Exception {
+    public String postReduceBatchTransaction(int batchSize, long iteration) throws Exception {
         PlutusV2Script voteBatcherScript = plutusScriptUtil.getVoteBatcherContract();
         String voteBatcherScriptAddress = plutusScriptUtil.getVoteBatcherContractAddress();
         String sender = operatorAccountProvider.getOperatorAddress();
@@ -75,7 +75,7 @@ public class VoteBatchReducer {
         }
 
         //Calculate group result batch datum
-        ResultBatchDatum reduceVoteBatchDatum = groupResultBatchDatumTuples(utxoTuples);
+        ResultBatchDatum reduceVoteBatchDatum = groupResultBatchDatumTuples(utxoTuples, iteration);
 
         log.info("############# Input Vote Batches ############");
         log.info(JsonUtil.getPrettyJson(utxoTuples.stream().map(utxoVoteBatch -> utxoVoteBatch._2).collect(Collectors.toList())));
@@ -108,7 +108,7 @@ public class VoteBatchReducer {
                         .mem(BigInteger.valueOf(0))
                         .steps(BigInteger.valueOf(0))
                         .build())
-                .redeemer(plutusObjectConverter.toPlutusData(ReduceVoteBatchRedeemer.create()))
+                .redeemer(plutusObjectConverter.toPlutusData(ReduceVoteBatchRedeemer.create(iteration)))
                 .redeemerTag(RedeemerTag.Spend).build()).collect(Collectors.toList());
 
 

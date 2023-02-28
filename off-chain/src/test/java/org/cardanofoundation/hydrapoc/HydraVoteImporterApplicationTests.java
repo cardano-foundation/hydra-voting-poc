@@ -10,6 +10,7 @@ import com.bloxbean.cardano.client.exception.CborSerializationException;
 import com.bloxbean.cardano.client.transaction.spec.PlutusV2Script;
 import com.bloxbean.cardano.client.util.HexUtil;
 import com.bloxbean.cardano.client.util.Tuple;
+import com.google.common.collect.Lists;
 import org.cardanofoundation.hydrapoc.batch.VoteBatchReducer;
 import org.cardanofoundation.hydrapoc.batch.VoteBatcher;
 import org.cardanofoundation.hydrapoc.batch.VoteUtxoFinder;
@@ -46,44 +47,63 @@ class HydraVoteImporterApplicationTests {
 
     //Run the following tests in sequence to import / create batch / reduce batch step
 
-    //1. Generate 20 votes
+    //1. Generate 150 votes
     @Test
     public void generateVotes() throws Exception {
-        command.generateVotes(3, 15, "votes.json");
+        command.generateVotes(10, 150, "votes.json");
     }
 
     //2. Import 20 votes from votes.json to script address
     @Test
     public void importVotesFromFile() throws Exception {
-        List<Vote> votes = randomVoteGenerator.getVotes(0, 15, "votes.json");
-        voteImporter.importVotes(votes);
+        var allVotes = randomVoteGenerator.getAllVotes("votes.json");
+        var batchSize = 5;
+
+        var partitions = Lists.partition(allVotes, batchSize);
+        for (var votesPart : partitions) {
+            if (votesPart.size() == batchSize) {
+                voteImporter.importVotes(votesPart);
+            } else {
+                System.err.println("ignoring the rest.., size:" + votesPart.size());
+            }
+        }
     }
 
     //3. Create a batch of 5 votes --> 1 batch
     //Run this test multiple times to create multiple batches
     @Test
     public void createAndPostBatch() throws Exception {
-        voteBatcher.createAndPostBatchTransaction(5);
-        voteBatcher.createAndPostBatchTransaction(5);
-        voteBatcher.createAndPostBatchTransaction(5);
+        var allVotes = randomVoteGenerator.getAllVotes("votes.json");
+        var batchSize = 5;
+        var partitions = Lists.partition(allVotes, batchSize);
+
+        for (var votesPart : partitions) {
+            if (votesPart.size() == batchSize) {
+                voteBatcher.createAndPostBatchTransaction(batchSize);
+            }
+        }
+        voteBatcher.createAndPostBatchTransaction(batchSize);
     }
 
-    //4. Reduce batch of 3 to 1
-    //Run this test multiple times to reduce batches to 1 batch
+    // 4. Reduce batch of 20 to 1
+    // Run this test multiple times to reduce batches to 1 batch
     @Test
     public void reduceBatch() throws Exception {
-        voteBatchReducer.postReduceBatchTransaction(3);
+        voteBatchReducer.postReduceBatchTransaction(5, 0);
+        voteBatchReducer.postReduceBatchTransaction(5, 0);
+        voteBatchReducer.postReduceBatchTransaction(5, 0);
+        voteBatchReducer.postReduceBatchTransaction(5, 0);
     }
 
-    @Test
-    public void fullMonthy01() throws Exception {
-        System.out.println("importing votes...");
-        importVotesFromFile();
-        System.out.println("creating and posting batches...");
-        createAndPostBatch();
-        System.out.println("reducing batches...");
-        reduceBatch();
-    }
+//    @Test
+//    public void fullMonthy01() throws Exception {
+//        System.out.println("importing votes...");
+//        importVotesFromFile();
+//        System.out.println("creating and posting batches...");
+//        createAndPostBatch();
+//        System.out.println("reducing batches...");
+//        reduceBatch();
+//    }
 
     @Test
     public void getVoteBatches() {

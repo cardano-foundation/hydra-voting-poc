@@ -75,7 +75,7 @@ public class VoteBatcher {
             return null;
         }
 
-        ResultBatchDatum resultBatchDatum = new ResultBatchDatum();
+        ResultBatchDatum resultBatchDatum = ResultBatchDatum.empty(0);
         for (Tuple<Utxo, VoteDatum> tuple : utxoTuples) {
             VoteDatum voteDatum = tuple._2;
             ChallengeProposalDatum challengeProposalDatum =

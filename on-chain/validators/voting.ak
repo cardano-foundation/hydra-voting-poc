@@ -50,6 +50,8 @@ type VotingDatum {
 type ResultsBatchDatum {
   //merke_tree_root: String
   results: Dict<ChallengeProposal, Result>,
+  // seq
+  iteration: Int,
 }
 
 type Redeemer {
@@ -58,8 +60,9 @@ type Redeemer {
     // merkle_tree: MerkleTree,
     // id = in fact merkle root hash
     id: Hash<Blake2b_224, String>,
+    iteration: Int,
   }
-  ReduceVoteBatch { id: Hash<Blake2b_224, String> }
+  ReduceVoteBatch { id: Hash<Blake2b_224, String>, iteration: Int }
 }
 
 // Note:
@@ -73,7 +76,7 @@ validator voting {
     let outputs: List<Output> = sc.transaction.outputs
 
     when redeemer is {
-      CreateVoteBatch { id } -> {
+      CreateVoteBatch { id, iteration } -> {
         // we sum all votes and output in the ResultsBatchDatum
         // and somehow verify id of the batch and total votes in the batch
         // alternatively use normal inputs
@@ -81,7 +84,7 @@ validator voting {
         let results: Dict<ChallengeProposal, Result> = count_votes(votes)
         // now we need to check if any of the output UTxOs contains results
         // now we have to check if batch_id matches
-        let output_datum = ResultsBatchDatum { results }
+        let output_datum = ResultsBatchDatum { results, iteration }
         batch_id_must_match(votes, id) && results_must_match(
           outputs: sc.transaction.outputs,
           expected_results: output_datum,
@@ -92,13 +95,17 @@ validator voting {
           output_reference,
         )
       }
-      ReduceVoteBatch { id: _id } -> {
+      ReduceVoteBatch { id: _id, iteration } -> {
+        let new_iteration = iteration + 1
         // collect results from all inputs (fail if there are still votes in smart contract)
         let all_results: List<ResultsBatchDatum> =
-          get_vote_results_from_inputs(inputs)
+          get_vote_results_from_inputs(inputs, iteration)
         // take existing results and compress them, into one
         let one_final_result: ResultsBatchDatum =
-          count_vote_results(all_results)
+          count_vote_results(
+            vote_results: all_results,
+            new_iteration: new_iteration,
+          )
         // check if resulting output datum contains votes counted up properly and that they send result back to the same address
         results_must_match(outputs, one_final_result)
       }
@@ -174,23 +181,28 @@ fn get_votes_from_inputs(inputs: List<Input>) -> List<Vote> {
   )
 }
 
-fn get_vote_results_from_inputs(inputs: List<Input>) -> List<ResultsBatchDatum> {
-  // what to do in case when there are still some votes in smart contract address
-  // should we ignore them or should we simply blow up reduction operation and smart contract fails?
-  // for now we will fail... in fact this is even good because it means there are still votes to reduce
-  list.map(
+// get vote results but only for this iteration
+fn get_vote_results_from_inputs(
+  inputs: List<Input>,
+  iteration: Int,
+) -> List<ResultsBatchDatum> {
+  list.filter_map(
     inputs,
     fn(input) {
       expect InlineDatum(vote_results_data) = input.output.datum
       expect results_data_datum: ResultsBatchDatum = vote_results_data
-
-      results_data_datum
+      if results_data_datum.iteration == iteration {
+        Some(results_data_datum)
+      } else {
+        None
+      }
     },
   )
 }
 
 fn count_vote_results(
   vote_results: List<ResultsBatchDatum>,
+  new_iteration: Int,
 ) -> ResultsBatchDatum {
   let merging_fn = fn(rd1: ResultsBatchDatum, rd2: ResultsBatchDatum) {
     ResultsBatchDatum {
@@ -200,9 +212,11 @@ fn count_vote_results(
         with: results_conflict_resolver,
         compare: challenge_proposal.compare,
       ),
+      iteration: new_iteration,
     }
   }
-  let zero = ResultsBatchDatum { results: dict.new() }
+  // assign new iteration
+  let zero = ResultsBatchDatum { results: dict.new(), iteration: new_iteration }
 
   list.foldl(vote_results, merging_fn, zero)
 }
