@@ -14,14 +14,15 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @Constr(alternative = 1)
 public class ReduceVoteBatchRedeemer {
+
     @PlutusField
     private String id;
 
-    public static CreateVoteBatchRedeemer create() {
+    public static ReduceVoteBatchRedeemer create() {
         try {
             byte[] bytes = KeyGenUtil.generateKey().getVkey().getBytes(); //any random bytes
             String id = HexUtil.encodeHexString(Blake2bUtil.blake2bHash224(bytes));
-            return new CreateVoteBatchRedeemer(id);
+            return new ReduceVoteBatchRedeemer(id);
         } catch (Exception e) {
             throw new RuntimeException("Create failed", e);
         }

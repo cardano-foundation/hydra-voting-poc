@@ -110,8 +110,7 @@ fn result_sent_to_own_address_match(
   let validator_hash =
     validators.own_validator_script_address_hash(inputs, output_reference)
 
-  let expected_results_datum = ResultsBatchDatum { results }
-  let expected_results_data: Data = expected_results_datum
+  let expected_results_data: Data = ResultsBatchDatum { results }
 
   list.any(
     outputs,
