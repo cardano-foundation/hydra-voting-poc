@@ -3,7 +3,7 @@ use aiken/hash.{Blake2b_224, Hash}
 use aiken/list
 use aiken/option
 use aiken/transaction.{
-  Datum, InlineDatum, Input, Output, OutputReference, ScriptContext, Spend,
+  InlineDatum, Input, Output, OutputReference, ScriptContext, Spend,
 }
 use aiken/transaction/credential.{ScriptCredential}
 use voting/address.{PubKeyHash}
@@ -148,14 +148,6 @@ fn batch_id_must_match(
 ) -> Bool {
   // pass merkle tree root and check if merkle tree matches
   True
-}
-
-// gets data from datum
-// Consider using expect to enforce InlineDatum
-fn get_data_from_datum(d: Datum) -> Data {
-  expect InlineDatum(some_data) = d
-
-  some_data
 }
 
 fn get_votes_from_inputs(inputs: List<Input>) -> List<Vote> {
