@@ -52,6 +52,7 @@ public class ResultBatchDatum {
                 long yes = ((BigIntPlutusData)resultData.getData().getPlutusDataList().get(0)).getValue().longValue();
                 long no = ((BigIntPlutusData)resultData.getData().getPlutusDataList().get(1)).getValue().longValue();
                 long abstain = ((BigIntPlutusData)resultData.getData().getPlutusDataList().get(2)).getValue().longValue();
+
                 ResultDatum resultDatum = new ResultDatum(yes, no, abstain);
 
                 resultBatchDatum.add(challengeProposalDatum, resultDatum);

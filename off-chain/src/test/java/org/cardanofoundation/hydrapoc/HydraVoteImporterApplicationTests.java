@@ -76,6 +76,16 @@ class HydraVoteImporterApplicationTests {
     }
 
     @Test
+    public void fullMonthy01() throws Exception {
+        System.out.println("importing votes...");
+        importVotesFromFile();
+        System.out.println("creating and posting batches...");
+        createAndPostBatch();
+        System.out.println("reducing batches...");
+        reduceBatch();
+    }
+
+    @Test
     public void getVoteBatches() {
         command.getVoteBatches(10);
     }

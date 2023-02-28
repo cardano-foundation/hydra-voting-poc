@@ -27,7 +27,6 @@ public class ResultDatum {
     private long abstain;
 
     public ResultDatum() {
-
     }
 
     /**
@@ -35,8 +34,8 @@ public class ResultDatum {
      * @param resultDatum
      */
     public void add(@NonNull ResultDatum resultDatum) {
-        this.yes = resultDatum.getYes();
-        this.no = resultDatum.getNo();
-        this.abstain = resultDatum.getAbstain();
+        this.yes = this.yes + resultDatum.getYes();
+        this.no = this.no + resultDatum.getNo();
+        this.abstain = this.abstain + resultDatum.getAbstain();
     }
 }

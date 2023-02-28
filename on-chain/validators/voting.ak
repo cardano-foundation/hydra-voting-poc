@@ -69,41 +69,45 @@ validator voting {
   fn(_voting_datum: VotingDatum, redeemer: Redeemer, sc: ScriptContext) -> Bool {
     // On L2 (Hydra) one will typically lock votes with 0 ADA but on L1 of course each eUTxO is guarded by ca. 1,7 ADA
     expect Spend(output_reference) = sc.purpose
+    let inputs: List<Input> = sc.transaction.inputs
+    let outputs: List<Output> = sc.transaction.outputs
 
     when redeemer is {
       CreateVoteBatch { id } -> {
         // we sum all votes and output in the ResultsBatchDatum
         // and somehow verify id of the batch and total votes in the batch
         // alternatively use normal inputs
-        let inputs: List<Input> = sc.transaction.inputs
-        let outputs: List<Output> = sc.transaction.outputs
         let votes: List<Vote> = get_votes_from_inputs(inputs)
         let results: Dict<ChallengeProposal, Result> = count_votes(votes)
         // now we need to check if any of the output UTxOs contains results
         // now we have to check if batch_id matches
-        results_must_match(
-          expected_results: results,
+        let output_datum = ResultsBatchDatum { results }
+        batch_id_must_match(votes, id) && results_must_match(
           outputs: sc.transaction.outputs,
-        ) && batch_id_must_match(votes, id) && result_sent_to_own_address_match(
+          expected_results: output_datum,
+        ) && result_sent_to_own_address_match(
           inputs,
           outputs,
-          results,
+          output_datum,
           output_reference,
         )
       }
       ReduceVoteBatch { id: _id } -> {
         // collect results from all inputs (fail if there are still votes in smart contract)
-        let inputs: List<Input> = sc.transaction.inputs
         let all_results: List<ResultsBatchDatum> =
           get_vote_results_from_inputs(inputs)
         // take existing results and compress them, into one
         let one_final_result: ResultsBatchDatum =
           count_vote_results(all_results)
-        // check if resulting output datum contains votes counted up properly
-        // todo
-        // check if we are one final vote results are sent back to the same contract / validator address (reduced)
-        dict.is_empty(one_final_result.results) == False
+        // check if resulting output datum contains votes counted up properly and that they send result back to the same address
+        results_must_match(outputs, one_final_result)
       }
+      // result_sent_to_own_address_match(
+      //   inputs,
+      //   outputs,
+      //   one_final_result,
+      //   output_reference,
+      // )
       // TODO: this operation can be fully recursive but we need sequence number to know how deeply nested we are
       // first we handle only seq = 0
       // then seq = 1
@@ -115,13 +119,13 @@ validator voting {
 fn result_sent_to_own_address_match(
   inputs: List<Input>,
   outputs: List<Output>,
-  results: Dict<ChallengeProposal, Result>,
+  results: ResultsBatchDatum,
   output_reference: OutputReference,
 ) {
   let validator_hash =
     validators.own_validator_script_address_hash(inputs, output_reference)
 
-  let expected_results_data: Data = ResultsBatchDatum { results }
+  let expected_results_data: Data = results
 
   list.any(
     outputs,
@@ -136,18 +140,16 @@ fn result_sent_to_own_address_match(
 }
 
 fn results_must_match(
-  expected_results: Dict<ChallengeProposal, Result>,
   outputs: List<Output>,
+  expected_results: ResultsBatchDatum,
 ) -> Bool {
-  let expected_results_datum = ResultsBatchDatum { results: expected_results }
-
   list.any(
     outputs,
     fn(output) {
       expect InlineDatum(given_results_data) = output.datum
       expect given_results_datum: ResultsBatchDatum = given_results_data
 
-      expected_results_datum == given_results_datum
+      expected_results == given_results_datum
     },
   )
 }
@@ -190,10 +192,7 @@ fn get_vote_results_from_inputs(inputs: List<Input>) -> List<ResultsBatchDatum> 
 fn count_vote_results(
   vote_results: List<ResultsBatchDatum>,
 ) -> ResultsBatchDatum {
-  let merging_fn: fn(ResultsBatchDatum, ResultsBatchDatum) -> ResultsBatchDatum = fn(
-    rd1: ResultsBatchDatum,
-    rd2: ResultsBatchDatum,
-  ) {
+  let merging_fn = fn(rd1: ResultsBatchDatum, rd2: ResultsBatchDatum) {
     ResultsBatchDatum {
       results: dict.union_with(
         left: rd1.results,

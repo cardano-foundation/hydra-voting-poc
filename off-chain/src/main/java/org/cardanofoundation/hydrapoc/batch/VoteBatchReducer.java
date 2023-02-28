@@ -43,6 +43,7 @@ import java.util.stream.Collectors;
 import static com.bloxbean.cardano.client.common.ADAConversionUtil.adaToLovelace;
 import static com.bloxbean.cardano.client.common.CardanoConstants.LOVELACE;
 import static org.cardanofoundation.hydrapoc.batch.util.CountVoteUtil.groupResultBatchDatum;
+import static org.cardanofoundation.hydrapoc.batch.util.CountVoteUtil.groupResultBatchDatumTuples;
 
 @Component
 @RequiredArgsConstructor
@@ -74,7 +75,7 @@ public class VoteBatchReducer {
         }
 
         //Calculate group result batch datum
-        ResultBatchDatum reduceVoteBatchDatum = groupResultBatchDatum(utxoTuples);
+        ResultBatchDatum reduceVoteBatchDatum = groupResultBatchDatumTuples(utxoTuples);
 
         log.info("############# Input Vote Batches ############");
         log.info(JsonUtil.getPrettyJson(utxoTuples.stream().map(utxoVoteBatch -> utxoVoteBatch._2).collect(Collectors.toList())));
