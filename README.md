@@ -44,8 +44,8 @@ General Statements:
 
 ## General Open Problems / Questions
 - Election: we would like to anybody could potentially run Hydra Head nodes but we do know that number of these people cannot exceed certain amount, e.g. 10
-- M1: if we separate voting from tallying not only from the business domain (which it is separated anyway) but also from technical point of view then votes in an encrypted form need to be imported by one Hydra Head Operator into a new network. Question: how do we make sure that this operator is trusted and that the same copy of votes which other operators have is in fact imported (idea: use smart contracts for this)
-- General: if jormungandr continues to be run in a private network for now, how will Hydra Head operators obtain access to individual votes (especially if they are outside of 3 founding entities)
+- M1: if we separate voting from tallying not only from the business domain (which it is separated anyway) but also from technical point of view then votes in an encrypted form need to be imported by one Hydra Head Operator into a new network. Here we want to prevent votes to be ommitted or imported twice.
+- General: if jormungandr continues to be run in a private network for now, how will Hydra Head operators obtain access to individual votes (especially if they are outside of 3 founding entities)?
 
 - M2: How split the key in such a way that each operator only gets a part of the key
 - M2: How to count the votes together, in Hydra one operator needs to sign a transaction and all need to simply validate (full consensus)
@@ -53,3 +53,7 @@ General Statements:
 - M2: Since Partial Homomorphic Encryption is CPU intensive, how can we actually run it in smart contract. Regardless of the fact that these are very resource intensitve tasks, right now there are no implementations for this available neither in Aiken nor in PlutusTx (to our knowledge)
 - General: Once we open up the tallying to all people, how can we in a decentralised way select Hydra Head Operators doing the tally process? One idea is that we conduct voting on L1 and Hydra Head operators + backup operators receive ca 1 to 2 years licence, such a license such cover operation for a few Catalyst rounds but question is whether people will want to participate in selection of Hydra Head Operators doing the tallying.
 - General: Currently Hydra does not support external transaction validation, meaning just like in Cardano transaction is automatically validated. External transaction validation could be useful in scenarios where a Hydra Head operator would also check validity of transaction against their off chain infrastructure.
+- Since so far in designs only one operator is doing initial voting import from one operator here are the ways to protect against double votes or omitting votes:
+  a) Use getUTxO against Hydra node and EACH operator imports votes to smart contract if and only if other operator didn't import votes yet
+  b) Allow only one operator to import and then after the whole voting is done - each operator in the offchain can process all results and check if all votes have been included (check votes). If they find something which is not correct, they can call off results. They can submit fraud proof such hat a certain vote was not included into account
+  c) validate a vote that is being imported by a hydra operator only if and if it has not been imported before (hydra code could be checking this via external validation)
