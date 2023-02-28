@@ -105,10 +105,10 @@ class HydraVoteImporterApplicationTests {
 //        reduceBatch();
 //    }
 
-    @Test
-    public void getVoteBatches() {
-        command.getVoteBatches(10);
-    }
+//    @Test
+//    public void getVoteBatches() {
+//        command.getVoteBatches(10);
+//    }
     //End
 
 

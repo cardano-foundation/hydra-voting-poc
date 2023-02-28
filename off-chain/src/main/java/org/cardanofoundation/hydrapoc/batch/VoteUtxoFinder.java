@@ -24,6 +24,7 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 @Slf4j
 public class VoteUtxoFinder {
+
     private final UtxoSupplier utxoSupplier;
     private final PlutusScriptUtil plutusScriptUtil;
 
@@ -65,7 +66,7 @@ public class VoteUtxoFinder {
         return utxos;
     }
 
-    public List<Tuple<Utxo, ResultBatchDatum>> getUtxosWithVoteBatches(int batchSize) {
+    public List<Tuple<Utxo, ResultBatchDatum>> getUtxosWithVoteBatches(int batchSize, long iteration) {
         String voteBatchContractAddress = null;
         try {
             voteBatchContractAddress = plutusScriptUtil.getVoteBatcherContractAddress();
@@ -89,7 +90,7 @@ public class VoteUtxoFinder {
                         Optional<ResultBatchDatum> resultBatchDatumOptional = ResultBatchDatum.deserialize(HexUtil.decodeHexString(utxo.getInlineDatum()));
                         return new Tuple<>(utxo, resultBatchDatumOptional.orElse(null));
                     })
-                    .filter(utxoOptionalTuple -> utxoOptionalTuple._2 != null)
+                    .filter(utxoOptionalTuple -> utxoOptionalTuple._2 != null && utxoOptionalTuple._2.getIteration() == iteration)
                     .collect(Collectors.toList());
 
             utxos.addAll(utxoTuples);

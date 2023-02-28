@@ -77,8 +77,8 @@ public class Commands {
     }
 
     @ShellMethod(value = "Get vote batches")
-    public void getVoteBatches(@ShellOption int nBatch) {
-        voteUtxoFinder.getUtxosWithVoteBatches(nBatch)
+    public void getVoteBatches(@ShellOption int nBatch, @ShellOption long iteration) {
+        voteUtxoFinder.getUtxosWithVoteBatches(nBatch, iteration)
                 .forEach(utxoVoteDatumTuple -> {
                     System.out.println("Utxo: " + utxoVoteDatumTuple._1.getTxHash() + "#" + utxoVoteDatumTuple._1.getOutputIndex());
                     System.out.println("Vote Batch: " + utxoVoteDatumTuple._2);

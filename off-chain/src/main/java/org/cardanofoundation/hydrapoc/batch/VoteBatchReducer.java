@@ -68,7 +68,7 @@ public class VoteBatchReducer {
         log.info("Sender Address: " + sender);
         log.info("Script Address: " + voteBatcherScriptAddress);
 
-        List<Tuple<Utxo, ResultBatchDatum>> utxoTuples = voteUtxoFinder.getUtxosWithVoteBatches(batchSize);
+        List<Tuple<Utxo, ResultBatchDatum>> utxoTuples = voteUtxoFinder.getUtxosWithVoteBatches(batchSize, iteration);
         if (utxoTuples.size() == 0) {
             log.warn("No utxo found");
             return null;
