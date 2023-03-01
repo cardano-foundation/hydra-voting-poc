@@ -93,17 +93,20 @@ class HydraVoteImporterApplicationTests {
         voteBatchReducer.postReduceBatchTransaction(5, 0);
         voteBatchReducer.postReduceBatchTransaction(5, 0);
         voteBatchReducer.postReduceBatchTransaction(5, 0);
+
+//        // final reduction
+        voteBatchReducer.postReduceBatchTransaction(4, 1);
     }
 
-//    @Test
-//    public void fullMonthy01() throws Exception {
-//        System.out.println("importing votes...");
-//        importVotesFromFile();
-//        System.out.println("creating and posting batches...");
-//        createAndPostBatch();
-//        System.out.println("reducing batches...");
-//        reduceBatch();
-//    }
+    @Test
+    public void fullMonthy01() throws Exception {
+        System.out.println("importing votes...");
+        importVotesFromFile();
+        System.out.println("creating and posting batches...");
+        createAndPostBatch();
+        System.out.println("reducing batches...");
+        reduceBatch();
+    }
 
 //    @Test
 //    public void getVoteBatches() {

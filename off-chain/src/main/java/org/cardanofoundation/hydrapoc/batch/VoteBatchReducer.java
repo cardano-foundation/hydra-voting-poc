@@ -74,8 +74,8 @@ public class VoteBatchReducer {
             return null;
         }
 
-        //Calculate group result batch datum
-        ResultBatchDatum reduceVoteBatchDatum = groupResultBatchDatumTuples(utxoTuples, iteration);
+        // Calculate group result batch datum
+        ResultBatchDatum reduceVoteBatchDatum = groupResultBatchDatumTuples(utxoTuples, iteration + 1);
 
         log.info("############# Input Vote Batches ############");
         log.info(JsonUtil.getPrettyJson(utxoTuples.stream().map(utxoVoteBatch -> utxoVoteBatch._2).collect(Collectors.toList())));

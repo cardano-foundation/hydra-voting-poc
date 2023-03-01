@@ -88,6 +88,7 @@ public class VoteUtxoFinder {
                     .filter(utxo -> StringUtils.hasLength(utxo.getInlineDatum()))
                     .map(utxo -> {
                         Optional<ResultBatchDatum> resultBatchDatumOptional = ResultBatchDatum.deserialize(HexUtil.decodeHexString(utxo.getInlineDatum()));
+
                         return new Tuple<>(utxo, resultBatchDatumOptional.orElse(null));
                     })
                     .filter(utxoOptionalTuple -> utxoOptionalTuple._2 != null && utxoOptionalTuple._2.getIteration() == iteration)
