@@ -24,7 +24,7 @@ Using Hydra experiment with a distributed Catalyst tally process such that more 
     - :hourglass_flowing_sand: Use one of Open Source Merkle Trees implementation in offchain infra or port our Merkle Tree to (Java / Scala / Kotlin) on L1
     - 🟢 Spin up and run local dev Hydra Head network (devnet)
     - 🟢 Develop PoC version of Hydra-Java-Client which allows us to easily access Hydra from java code: https://github.com/cardano-foundation/hydra-java-client
-    - Port and run on chain contract counting unencrypted Catalyst votes with off-chain code on Hydra Dev Network
+    - :hourglass_flowing_sand: Port and run on chain contract counting unencrypted Catalyst votes with off-chain code on Hydra Dev Network
     - Use one of Open Source Merkle Trees implementation in offchain infra or port our Merkle Tree to (Java / Scala / Kotlin)
     - Hook up Merkle Tree to contract counting votes to attest if vote which is on chain is part of the tree
     - Perform final votes batch calculation merking all Merkle Trees together and giving a final result, when closing head final results plus global merkle tree root should be committed to L1.
