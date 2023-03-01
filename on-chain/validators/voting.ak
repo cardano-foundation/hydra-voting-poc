@@ -13,7 +13,6 @@ use voting/validators
 // TODO
 // 1. add merkle tree to validate votes
 // 2. What shall we call datums and what not???
-// 3. Reduce vote batches redeemer
 
 type VotingPower =
   Int

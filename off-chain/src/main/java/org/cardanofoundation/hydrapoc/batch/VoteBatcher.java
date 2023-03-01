@@ -7,7 +7,6 @@ import com.bloxbean.cardano.client.api.UtxoSupplier;
 import com.bloxbean.cardano.client.api.model.Amount;
 import com.bloxbean.cardano.client.api.model.Result;
 import com.bloxbean.cardano.client.api.model.Utxo;
-import com.bloxbean.cardano.client.backend.api.TransactionService;
 import com.bloxbean.cardano.client.coinselection.UtxoSelectionStrategy;
 import com.bloxbean.cardano.client.coinselection.impl.DefaultUtxoSelectionStrategyImpl;
 import com.bloxbean.cardano.client.function.Output;
@@ -50,10 +49,10 @@ import static com.bloxbean.cardano.client.common.CardanoConstants.LOVELACE;
 @RequiredArgsConstructor
 @Slf4j
 public class VoteBatcher {
+
     private final UtxoSupplier utxoSupplier;
     private final ProtocolParamsSupplier protocolParamsSupplier;
     private final TransactionProcessor transactionProcessor;
-    private final TransactionService transactionService;
     private final OperatorAccountProvider operatorAccountProvider;
     private final TransactionUtil transactionUtil;
     private final PlutusScriptUtil plutusScriptUtil;

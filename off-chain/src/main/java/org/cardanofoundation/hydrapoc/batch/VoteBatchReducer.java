@@ -7,7 +7,6 @@ import com.bloxbean.cardano.client.api.UtxoSupplier;
 import com.bloxbean.cardano.client.api.model.Amount;
 import com.bloxbean.cardano.client.api.model.Result;
 import com.bloxbean.cardano.client.api.model.Utxo;
-import com.bloxbean.cardano.client.backend.api.TransactionService;
 import com.bloxbean.cardano.client.coinselection.UtxoSelectionStrategy;
 import com.bloxbean.cardano.client.coinselection.impl.DefaultUtxoSelectionStrategyImpl;
 import com.bloxbean.cardano.client.function.Output;
@@ -48,10 +47,10 @@ import static org.cardanofoundation.hydrapoc.batch.util.CountVoteUtil.groupResul
 @RequiredArgsConstructor
 @Slf4j
 public class VoteBatchReducer {
+
     private final UtxoSupplier utxoSupplier;
     private final ProtocolParamsSupplier protocolParamsSupplier;
     private final TransactionProcessor transactionProcessor;
-    private final TransactionService transactionService;
     private final OperatorAccountProvider operatorAccountProvider;
     private final TransactionUtil transactionUtil;
     private final PlutusScriptUtil plutusScriptUtil;
@@ -110,12 +109,11 @@ public class VoteBatchReducer {
                 .redeemer(plutusObjectConverter.toPlutusData(ReduceVoteBatchRedeemer.create(iteration)))
                 .redeemerTag(RedeemerTag.Spend).build()).collect(Collectors.toList());
 
-
         TxBuilder txBuilder = output.outputBuilder()
                 .buildInputs(InputBuilders.createFromUtxos(scriptUtxos, sender))
                 .andThen(CollateralBuilders.collateralOutputs(sender, new ArrayList<>(collateralUtxos))); //CIP-40
 
-        //Loop and add scriptCallContexts
+        // Loop and add scriptCallContexts
         for (var scriptCallContext : scriptCallContexts) {
             txBuilder = txBuilder.andThen(ScriptCallContextProviders.createFromScriptCallContext(scriptCallContext));
         }
