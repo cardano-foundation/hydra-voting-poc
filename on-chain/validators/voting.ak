@@ -85,39 +85,29 @@ validator voting {
         // now we need to check if any of the output UTxOs contains results
         // now we have to check if batch_id matches
         let output_datum = ResultsBatchDatum { results, iteration }
-        batch_id_must_match(votes, id) && results_must_match(
+        batch_id_must_match(id) && results_must_match(
           outputs: sc.transaction.outputs,
           expected_results: output_datum,
-        ) && result_sent_to_own_address_match(
-          inputs,
-          outputs,
-          output_datum,
-          output_reference,
-        )
+        ) && result_sent_to_own_address_match(inputs, outputs, output_reference)
       }
-      ReduceVoteBatch { id: _id, iteration } -> {
-        let new_iteration = iteration + 1
+      ReduceVoteBatch { id, iteration } -> {
         // collect results from all inputs (fail if there are still votes in smart contract)
+        // take existing results and compress them, into one
+        // check if resulting output datum contains votes counted up properly and that they send result back to the same address
+        let new_iteration = iteration + 1
         let all_results: List<ResultsBatchDatum> =
           get_vote_results_from_inputs(inputs, iteration)
-        // take existing results and compress them, into one
         let one_final_result: ResultsBatchDatum =
           count_vote_results(
             vote_results: all_results,
             new_iteration: new_iteration,
           )
-        // check if resulting output datum contains votes counted up properly and that they send result back to the same address
-        results_must_match(outputs, one_final_result)
+        batch_id_must_match(id) && results_must_match(outputs, one_final_result) && result_sent_to_own_address_match(
+          inputs,
+          outputs,
+          output_reference,
+        )
       }
-      // result_sent_to_own_address_match(
-      //   inputs,
-      //   outputs,
-      //   one_final_result,
-      //   output_reference,
-      // )
-      // TODO: this operation can be fully recursive but we need sequence number to know how deeply nested we are
-      // first we handle only seq = 0
-      // then seq = 1
       _ -> False
     }
   }
@@ -126,22 +116,18 @@ validator voting {
 fn result_sent_to_own_address_match(
   inputs: List<Input>,
   outputs: List<Output>,
-  results: ResultsBatchDatum,
   output_reference: OutputReference,
 ) {
   let validator_hash =
     validators.own_validator_script_address_hash(inputs, output_reference)
-
-  let expected_results_data: Data = results
 
   list.any(
     outputs,
     fn(output) {
       expect ScriptCredential(output_script_hash) =
         output.address.payment_credential
-      expect InlineDatum(output_results_data) = output.datum
 
-      output_script_hash == validator_hash && output_results_data == expected_results_data
+      output_script_hash == validator_hash
     },
   )
 }
@@ -155,16 +141,12 @@ fn results_must_match(
     fn(output) {
       expect InlineDatum(given_results_data) = output.datum
       expect given_results_datum: ResultsBatchDatum = given_results_data
-
       expected_results == given_results_datum
     },
   )
 }
 
-fn batch_id_must_match(
-  _votes: List<Vote>,
-  _batch_id: Hash<Blake2b_224, String>,
-) -> Bool {
+fn batch_id_must_match(_batch_id: Hash<Blake2b_224, String>) -> Bool {
   // pass merkle tree root and check if merkle tree matches
   True
 }

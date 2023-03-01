@@ -38,4 +38,5 @@ public class ResultDatum {
         this.no = this.no + resultDatum.getNo();
         this.abstain = this.abstain + resultDatum.getAbstain();
     }
+
 }
