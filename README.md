@@ -20,9 +20,9 @@ Using Hydra experiment with a distributed Catalyst tally process such that more 
     - 🟢 Port Merkle Tree from Hydra to Aiken (https://github.com/input-output-hk/hydra/blame/master/plutus-merkle-tree/src/Plutus/MerkleTree.hs) -> https://github.com/aiken-lang/trees/pull/1/files
     - 🟢 Write simple on chain contract that counts votes (https://github.com/cardano-foundation/hydra-voting-poc/blob/master/on-chain/validators/voting.ak) 
     - 🟢 Write fake votes generator compatible with Catalyst domain model
-    - :hourglass_flowing_sand: Write and run on chain contract counting unencrypted Catalyst votes with off-chain code without merkle trees on L1
+    - 🟢 Write and run on chain contract counting unencrypted Catalyst votes with off-chain code without merkle trees on L1
     - :hourglass_flowing_sand: Use one of Open Source Merkle Trees implementation in offchain infra or port our Merkle Tree to (Java / Scala / Kotlin) on L1
-    - 🟢 Spin up local dev Hydra Head network
+    - 🟢 Spin up and run local dev Hydra Head network (devnet)
     - 🟢 Develop PoC version of Hydra-Java-Client which allows us to easily access Hydra from java code: https://github.com/cardano-foundation/hydra-java-client
     - Port and run on chain contract counting unencrypted Catalyst votes with off-chain code on Hydra Dev Network
     - Use one of Open Source Merkle Trees implementation in offchain infra or port our Merkle Tree to (Java / Scala / Kotlin)
