@@ -28,7 +28,7 @@ Using Hydra experiment with a distributed Catalyst tally process such that more 
     - Perform final votes batch calculation merking all Merkle Trees together and giving a final result, when closing head final results plus global merkle tree root should be committed to L1.
 
 Demos:
- - https://drive.google.com/file/d/1NTKVCsRI7Teh1lRDTME6qQ5HhTlJuO95/view?usp=sharing
+ - M1 - KW9 status update: https://drive.google.com/file/d/1NTKVCsRI7Teh1lRDTME6qQ5HhTlJuO95/view?usp=sharing
 
 ![image](https://user-images.githubusercontent.com/335933/219307471-2b9a367c-2586-4fe5-92a7-97e582f35c12.png)
 
