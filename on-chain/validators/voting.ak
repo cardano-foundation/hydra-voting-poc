@@ -1,3 +1,4 @@
+use aiken/builtin
 use aiken/dict.{Dict}
 use aiken/hash.{Blake2b_224, Hash}
 use aiken/list
@@ -8,6 +9,7 @@ use aiken/transaction.{
 use aiken/transaction/credential.{ScriptCredential}
 use voting/address.{PubKeyHash}
 use voting/challenge_proposal.{Challenge, ChallengeProposal, Proposal}
+use voting/mt.{MerkleTree}
 use voting/validators
 
 // TODO
@@ -42,7 +44,8 @@ type Result {
 }
 
 // batch_size: Int?
-// merkle_tree: MerkleTree
+// respective pubkey hashes for authorised parties
+// should we put root hash of the big merkle tree here?
 type VotingDatum {
 }
 
@@ -54,12 +57,8 @@ type ResultsBatchDatum {
 }
 
 type Redeemer {
-  // if the votes submit and locked and are complete, we have to use CIP-31
-  CreateVoteBatch {
-    // merkle_tree: MerkleTree,
-    // id = in fact merkle root hash
-    id: Hash<Blake2b_224, String>,
-  }
+  // Approve { merkle_tree: MerkleTree<Vote> }
+  CreateVoteBatch { merkle_tree: MerkleTree<Vote> }
   ReduceVoteBatch { id: Hash<Blake2b_224, String>, iteration: Int }
 }
 
@@ -74,7 +73,7 @@ validator voting {
     let outputs: List<Output> = sc.transaction.outputs
 
     when redeemer is {
-      CreateVoteBatch { id } -> {
+      CreateVoteBatch { merkle_tree } -> {
         // we sum all votes and output in the ResultsBatchDatum
         // and somehow verify id of the batch and total votes in the batch
         // alternatively use normal inputs
@@ -83,12 +82,12 @@ validator voting {
         // now we need to check if any of the output UTxOs contains results
         // now we have to check if batch_id matches
         let output_datum = ResultsBatchDatum { results, iteration: 0 }
-        batch_id_must_match(id) && results_must_match(
+        validate_votes(votes, merkle_tree) && results_must_match(
           outputs: sc.transaction.outputs,
           expected_results: output_datum,
         ) && result_sent_to_own_address_match(inputs, outputs, output_reference)
       }
-      ReduceVoteBatch { id, iteration } -> {
+      ReduceVoteBatch { id: _id, iteration } -> {
         // collect results from all inputs (fail if there are still votes in smart contract)
         // take existing results and compress them, into one
         // check if resulting output datum contains votes counted up properly and that they send result back to the same address
@@ -100,7 +99,7 @@ validator voting {
             vote_results: all_results,
             new_iteration: new_iteration,
           )
-        batch_id_must_match(id) && results_must_match(outputs, one_final_result) && result_sent_to_own_address_match(
+        results_must_match(outputs, one_final_result) && result_sent_to_own_address_match(
           inputs,
           outputs,
           output_reference,
@@ -144,9 +143,18 @@ fn results_must_match(
   )
 }
 
-fn batch_id_must_match(_batch_id: Hash<Blake2b_224, String>) -> Bool {
-  // pass merkle tree root and check if merkle tree matches
-  True
+fn validate_votes(votes: List<Vote>, merkle_tree: MerkleTree<Vote>) -> Bool {
+  let vote_ser_fn = fn(v: Vote) { builtin.serialise_data(v) }
+
+  let all_votes_present_match =
+    list.all(
+      votes,
+      fn(vote) { mt.member_from_tree(merkle_tree, vote, vote_ser_fn) },
+    )
+
+  let leaf_size_match = mt.size(merkle_tree) == list.length(votes)
+
+  all_votes_present_match && leaf_size_match
 }
 
 fn get_votes_from_inputs(inputs: List<Input>) -> List<Vote> {

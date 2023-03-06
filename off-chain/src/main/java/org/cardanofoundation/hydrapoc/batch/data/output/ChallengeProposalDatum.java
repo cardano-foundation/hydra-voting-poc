@@ -17,4 +17,5 @@ public class ChallengeProposalDatum {
     private long challenge;
     @PlutusField
     private long proposal;
+
 }

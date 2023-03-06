@@ -25,10 +25,11 @@ dependencies {
     implementation 'org.springframework.shell:spring-shell-starter'
     implementation 'org.springframework.retry:spring-retry'
     implementation 'org.springframework:spring-aspects'
-    implementation 'com.bloxbean.cardano:cardano-client-lib:0.4.3'
+    implementation 'com.bloxbean.cardano:cardano-client-lib:0.4.4-SNAPSHOT'
     implementation 'com.bloxbean.cardano:cardano-client-backend-blockfrost:0.4.3'
-    implementation 'com.bloxbean.cardano:aiken-java-binding:0.0.1'
+    implementation 'com.bloxbean.cardano:aiken-java-binding:0.0.2'
     implementation("com.google.guava:guava:31.1-jre")
+    implementation("org.cardanofoundation:merkle-tree-java:0.0.1-SNAPSHOT")
 
     implementation 'org.projectlombok:lombok:1.18.26'
     annotationProcessor 'org.projectlombok:lombok:1.18.26'

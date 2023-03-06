@@ -10,7 +10,6 @@ import com.bloxbean.cardano.client.api.model.Utxo;
 import com.bloxbean.cardano.client.coinselection.UtxoSelectionStrategy;
 import com.bloxbean.cardano.client.coinselection.impl.DefaultUtxoSelectionStrategyImpl;
 import com.bloxbean.cardano.client.function.Output;
-import com.bloxbean.cardano.client.function.TxBuilder;
 import com.bloxbean.cardano.client.function.TxBuilderContext;
 import com.bloxbean.cardano.client.function.helper.BalanceTxBuilders;
 import com.bloxbean.cardano.client.function.helper.CollateralBuilders;
@@ -25,6 +24,7 @@ import com.bloxbean.cardano.client.util.JsonUtil;
 import com.bloxbean.cardano.client.util.Tuple;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import lombok.val;
 import org.cardanofoundation.hydrapoc.batch.data.input.CreateVoteBatchRedeemer;
 import org.cardanofoundation.hydrapoc.batch.data.output.ChallengeProposalDatum;
 import org.cardanofoundation.hydrapoc.batch.data.output.ResultBatchDatum;
@@ -33,6 +33,8 @@ import org.cardanofoundation.hydrapoc.commands.PlutusScriptUtil;
 import org.cardanofoundation.hydrapoc.commands.TransactionUtil;
 import org.cardanofoundation.hydrapoc.common.OperatorAccountProvider;
 import org.cardanofoundation.hydrapoc.importvote.VoteDatum;
+import org.cardanofoundation.merkle.MerkleHash;
+import org.cardanofoundation.merkle.MerkleTree;
 import org.springframework.stereotype.Component;
 
 import java.math.BigInteger;
@@ -62,6 +64,8 @@ public class VoteBatcher {
 
     //TODO -- check collateral return when new utxo added during balanceTx
     public String createAndPostBatchTransaction(int batchSize) throws Exception {
+        val merkleTree = new MerkleTree();
+
         PlutusV2Script voteBatcherScript = plutusScriptUtil.getVoteBatcherContract();
         String voteBatcherScriptAddress = plutusScriptUtil.getVoteBatcherContractAddress();
         String sender = operatorAccountProvider.getOperatorAddress();
@@ -74,11 +78,13 @@ public class VoteBatcher {
             return null;
         }
 
-        ResultBatchDatum resultBatchDatum = ResultBatchDatum.empty(0);
-        for (Tuple<Utxo, VoteDatum> tuple : utxoTuples) {
-            VoteDatum voteDatum = tuple._2;
-            ChallengeProposalDatum challengeProposalDatum =
-                    new ChallengeProposalDatum(voteDatum.getChallenge(), voteDatum.getProposal());
+        val resultBatchDatum = ResultBatchDatum.empty(0);
+        for (val tuple : utxoTuples) {
+            val voteDatum = tuple._2;
+            val votePlutus = plutusObjectConverter.toPlutusData(voteDatum).serializeToBytes();
+            merkleTree.appendLeaf(MerkleHash.create(votePlutus).getValue());
+
+            val challengeProposalDatum = new ChallengeProposalDatum(voteDatum.getChallenge(), voteDatum.getProposal());
 
             ResultDatum resultDatum = resultBatchDatum.get(challengeProposalDatum);
             if (resultDatum == null) {
@@ -100,6 +106,8 @@ public class VoteBatcher {
                     log.warn("Invalid vote, " + voteDatum.getChoice());
             }
         }
+        merkleTree.buildTree();
+
         log.info("############# Input Votes ############");
         log.info(JsonUtil.getPrettyJson(utxoTuples.stream().map(utxoVoteDatumTuple -> utxoVoteDatumTuple._2).collect(Collectors.toList())));
         log.info("########### Result Datum #############");
@@ -123,45 +131,46 @@ public class VoteBatcher {
         List<Utxo> scriptUtxos = utxoTuples.stream().map(utxoVoteDatumTuple -> utxoVoteDatumTuple._1)
                 .collect(Collectors.toList());
 
-        List<ScriptCallContext> scriptCallContexts = scriptUtxos.stream().map(utxo -> ScriptCallContext
+        val scriptCallContexts = scriptUtxos.stream().map(utxo -> ScriptCallContext
                 .builder()
                 .script(voteBatcherScript)
                 .utxo(utxo)
-                .exUnits(ExUnits.builder()  //Exact exUnits will be calculated later
+                .exUnits(ExUnits.builder()  // Exact exUnits will be calculated later
                         .mem(BigInteger.valueOf(0))
                         .steps(BigInteger.valueOf(0))
                         .build())
-                .redeemer(plutusObjectConverter.toPlutusData(CreateVoteBatchRedeemer.create()))
-                .redeemerTag(RedeemerTag.Spend).build()).collect(Collectors.toList());
 
+                .redeemer(plutusObjectConverter.toPlutusData(CreateVoteBatchRedeemer.create(merkleTree)))
+                .redeemerTag(RedeemerTag.Spend).build())
+                .collect(Collectors.toList());
 
-        TxBuilder txBuilder = output.outputBuilder()
+        var txBuilder = output.outputBuilder()
                 .buildInputs(InputBuilders.createFromUtxos(scriptUtxos, sender))
-                .andThen(CollateralBuilders.collateralOutputs(sender, new ArrayList<>(collateralUtxos))); //CIP-40
+                .andThen(CollateralBuilders.collateralOutputs(sender, new ArrayList<>(collateralUtxos))); // CIP-40
 
-        //Loop and add scriptCallContexts
+        // Loop and add scriptCallContexts
         for (var scriptCallContext : scriptCallContexts) {
             txBuilder = txBuilder.andThen(ScriptCallContextProviders.createFromScriptCallContext(scriptCallContext));
         }
 
         txBuilder = txBuilder.andThen((context, txn) -> {
-                    TxEvaluator txEvaluator = new TxEvaluator(context.getUtxos());
-                    CostMdls costMdls = new CostMdls();
-                    costMdls.add(CostModelUtil.getCostModelFromProtocolParams(protocolParamsSupplier.getProtocolParams(), Language.PLUTUS_V2).orElseThrow());
-                    List<Redeemer> evalReedemers = txEvaluator.evaluateTx(txn, costMdls);
+            TxEvaluator txEvaluator = new TxEvaluator();
+            CostMdls costMdls = new CostMdls();
+            costMdls.add(CostModelUtil.getCostModelFromProtocolParams(protocolParamsSupplier.getProtocolParams(), Language.PLUTUS_V2).orElseThrow());
+            List<Redeemer> evalReedemers = txEvaluator.evaluateTx(txn, context.getUtxos(), costMdls);
 
-                    List<Redeemer> redeemers = txn.getWitnessSet().getRedeemers();
-                    for (Redeemer redeemer : redeemers) { //Update costs
-                        evalReedemers.stream().filter(evalReedemer -> evalReedemer.getIndex().equals(redeemer.getIndex()))
-                                .findFirst()
-                                .ifPresent(evalRedeemer -> redeemer.setExUnits(evalRedeemer.getExUnits()));
-                    }
+            List<Redeemer> redeemers = txn.getWitnessSet().getRedeemers();
+            for (Redeemer redeemer : redeemers) { //Update costs
+                evalReedemers.stream().filter(evalReedemer -> evalReedemer.getIndex().equals(redeemer.getIndex()))
+                        .findFirst()
+                        .ifPresent(evalRedeemer -> redeemer.setExUnits(evalRedeemer.getExUnits()));
+            }
 
-                    // Remove all scripts from witness and just add one
-                    txn.getWitnessSet().getPlutusV2Scripts().clear();
-                    txn.getWitnessSet().getPlutusV2Scripts().add(plutusScriptUtil.getVoteBatcherContract());
-                })
-                .andThen(BalanceTxBuilders.balanceTx(sender, 1));
+            // Remove all scripts from witness and just add one
+            txn.getWitnessSet().getPlutusV2Scripts().clear();
+            txn.getWitnessSet().getPlutusV2Scripts().add(plutusScriptUtil.getVoteBatcherContract());
+        })
+        .andThen(BalanceTxBuilders.balanceTx(sender, 1));
 
         TxBuilderContext txBuilderContext = TxBuilderContext.init(utxoSupplier, protocolParamsSupplier);
         Transaction transaction = txBuilderContext.buildAndSign(txBuilder, operatorAccountProvider.getTxSigner());

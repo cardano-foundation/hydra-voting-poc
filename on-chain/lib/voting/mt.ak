@@ -3,18 +3,10 @@ use aiken/hash.{Hash, Sha2_256, sha2_256}
 use aiken/list
 use aiken/option.{choice, is_none}
 
-// Construction of the merkle tree shouldn't be done by hand, but via
-// 'from_list'.
-/// A purely functional implementation of MerkleTrees that is suitable for
-/// usage on-chain. Note, however, that the construction of 'MerkleTree' and
-/// membership proofs are still expected to happen *off-chain* while only the
-/// proof verification should be done on-chain.
-///
-/// Code ported to Aiken from Hydra (https://github.com/input-output-hk/hydra/blob/master/plutus-merkle-tree/src/Plutus/MerkleTree.hs)
-/// A MerkleTree representation, suitable for on-chain manipulation.
+/// Variant of MerkleTree with only hash but without actual value
 pub type MerkleTree<a> {
   Empty
-  Leaf { value: a, hash: Hash<Sha2_256, ByteArray> }
+  Leaf { hash: Hash<Sha2_256, ByteArray> }
   Node {
     hash: Hash<Sha2_256, ByteArray>,
     left: MerkleTree<a>,
@@ -30,32 +22,11 @@ pub type ProofItem {
   Right { hash: Hash<Sha2_256, ByteArray> }
 }
 
-/// Deconstruct a 'MerkleTree' back to a list of elements.
-pub fn to_list(self: MerkleTree<a>) -> List<a> {
-  when self is {
-    Empty -> []
-    Leaf { value, .. } -> [value]
-    Node { left, right, .. } -> list.concat(to_list(left), to_list(right))
-  }
-}
-
-test to_list_1() {
-  let dog = @"dog"
-  let cat = @"cat"
-  let mouse = @"mouse"
-  let items = [dog, cat, mouse]
-  let serialise_fn = create_string_item_serialise_fn()
-
-  let mt = from_list(items, serialise_fn)
-
-  items == to_list(mt)
-}
-
 // Function returning a hash of a given Merkle Tree element
 pub fn root_hash(self: MerkleTree<a>) -> Hash<Sha2_256, ByteArray> {
   when self is {
     Empty -> #""
-    Leaf { hash, .. } -> hash
+    Leaf { hash } -> hash
     Node { hash, .. } -> hash
   }
 }
@@ -187,7 +158,7 @@ test is_empty_2() {
   let dog = @"dog"
   let hash = create_string_item_serialise_fn()
 
-  let mt = Leaf { value: dog, hash: hash(dog) }
+  let mt = Leaf { hash: hash(dog) }
 
   is_empty(mt) == False
 }
@@ -200,7 +171,7 @@ fn do_proof(
 ) -> Option<Proof> {
   when self is {
     Empty -> None
-    Leaf { hash, .. } ->
+    Leaf { hash } ->
       if hash == item_hash {
         Some(proof)
       } else {
@@ -347,7 +318,7 @@ fn do_from_list(
     [] -> Empty
     [item] -> {
       let hashed_item = sha2_256(serialise_fn(item))
-      Leaf { value: item, hash: hashed_item }
+      Leaf { hash: hashed_item }
     }
     all -> {
       let cutoff: Int = len / 2
@@ -390,7 +361,7 @@ test from_2() {
   let serialise_fn = create_string_item_serialise_fn()
   let mt = from_list(items, serialise_fn)
 
-  Leaf { value: dog, hash: sha2_256(serialise_fn(dog)) } == mt
+  Leaf { hash: sha2_256(serialise_fn(dog)) } == mt
 }
 
 test from_3() {
@@ -408,8 +379,8 @@ test from_3() {
 
   Node {
     hash: root_hash,
-    left: Leaf { value: dog, hash: sha2_256(serialise_fn(dog)) },
-    right: Leaf { value: cat, hash: sha2_256(serialise_fn(cat)) },
+    left: Leaf { hash: sha2_256(serialise_fn(dog)) },
+    right: Leaf { hash: sha2_256(serialise_fn(cat)) },
   } == mt
 }
 
@@ -435,11 +406,11 @@ test from_4() {
 
   Node {
     hash: root_hash,
-    left: Leaf { value: dog, hash: sha2_256(serialise_fn(dog)) },
+    left: Leaf { hash: sha2_256(serialise_fn(dog)) },
     right: Node {
       hash: node_hash,
-      left: Leaf { value: cat, hash: sha2_256(serialise_fn(cat)) },
-      right: Leaf { value: mouse, hash: sha2_256(serialise_fn(mouse)) },
+      left: Leaf { hash: sha2_256(serialise_fn(cat)) },
+      right: Leaf { hash: sha2_256(serialise_fn(mouse)) },
     },
   } == mt
 }
@@ -473,13 +444,13 @@ test from_5() {
     hash: root_hash,
     left: Node {
       hash: left_node_hash,
-      left: Leaf { value: dog, hash: sha2_256(serialise_fn(dog)) },
-      right: Leaf { value: cat, hash: sha2_256(serialise_fn(cat)) },
+      left: Leaf { hash: sha2_256(serialise_fn(dog)) },
+      right: Leaf { hash: sha2_256(serialise_fn(cat)) },
     },
     right: Node {
       hash: right_node_hash,
-      left: Leaf { value: mouse, hash: sha2_256(serialise_fn(mouse)) },
-      right: Leaf { value: horse, hash: sha2_256(serialise_fn(horse)) },
+      left: Leaf { hash: sha2_256(serialise_fn(mouse)) },
+      right: Leaf { hash: sha2_256(serialise_fn(horse)) },
     },
   } == mt
 }
@@ -627,14 +598,15 @@ test member_6() {
 }
 
 pub fn member_from_tree(
-  item: a,
-  root_hash: Hash<Sha2_256, ByteArray>,
   tree: MerkleTree<a>,
+  item: a,
   serialise_fn: fn(a) -> Hash<Sha2_256, a>,
 ) -> Bool {
   let proof: Option<Proof> = get_proof(tree, item, serialise_fn)
+  let rh = root_hash(tree)
+
   when proof is {
-    Some(p) -> member(item, root_hash, p, serialise_fn)
+    Some(p) -> member(item, rh, p, serialise_fn)
     None -> False
   }
 }
@@ -653,14 +625,8 @@ test member_from_tree_1() {
   let mt = from_list(items, serialise_fn)
 
   let item = pig
-  let rh = root_hash(mt)
 
-  member_from_tree(
-    item: item,
-    root_hash: rh,
-    tree: mt,
-    serialise_fn: serialise_fn,
-  )
+  member_from_tree(tree: mt, item: item, serialise_fn: serialise_fn)
 }
 
 test member_from_tree_2() {
@@ -677,14 +643,8 @@ test member_from_tree_2() {
   let mt = from_list(items, serialise_fn)
 
   let item = @"parrot"
-  let rh = root_hash(mt)
 
-  member_from_tree(
-    item: item,
-    root_hash: rh,
-    tree: mt,
-    serialise_fn: serialise_fn,
-  ) == False
+  member_from_tree(tree: mt, item: item, serialise_fn: serialise_fn) == False
 }
 
 fn get_proof_item_value(proof_item: ProofItem) -> Hash<Sha2_256, ByteArray> {
@@ -695,6 +655,6 @@ fn get_proof_item_value(proof_item: ProofItem) -> Hash<Sha2_256, ByteArray> {
 }
 
 // needed only for tests
-fn create_string_item_serialise_fn() -> fn(String) -> Hash<Sha2_256, String> {
+fn create_string_item_serialise_fn() -> fn(String) -> ByteArray {
   fn(x: String) { from_string(x) }
 }

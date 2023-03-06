@@ -34,14 +34,19 @@ class HydraVoteImporterApplicationTests {
 
     @Autowired
     private RandomVoteGenerator randomVoteGenerator;
+
     @Autowired
     private VoteImporter voteImporter;
+
     @Autowired
     private Commands command;
+
     @Autowired
     private VoteUtxoFinder voteUtxoFinder;
+
     @Autowired
     private VoteBatcher voteBatcher;
+
     @Autowired
     private VoteBatchReducer voteBatchReducer;
 

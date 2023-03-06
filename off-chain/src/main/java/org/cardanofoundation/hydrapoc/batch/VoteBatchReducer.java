@@ -1,5 +1,6 @@
 package org.cardanofoundation.hydrapoc.batch;
 
+import com.bloxbean.cardano.aiken.tx.evaluator.SlotConfig;
 import com.bloxbean.cardano.aiken.tx.evaluator.TxEvaluator;
 import com.bloxbean.cardano.client.api.ProtocolParamsSupplier;
 import com.bloxbean.cardano.client.api.TransactionProcessor;
@@ -25,6 +26,7 @@ import com.bloxbean.cardano.client.util.JsonUtil;
 import com.bloxbean.cardano.client.util.Tuple;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import lombok.val;
 import org.cardanofoundation.hydrapoc.batch.data.input.ReduceVoteBatchRedeemer;
 import org.cardanofoundation.hydrapoc.batch.data.output.ResultBatchDatum;
 import org.cardanofoundation.hydrapoc.commands.PlutusScriptUtil;
@@ -119,10 +121,12 @@ public class VoteBatchReducer {
         }
 
         txBuilder = txBuilder.andThen((context, txn) -> {
-                    TxEvaluator txEvaluator = new TxEvaluator(context.getUtxos());
-                    CostMdls costMdls = new CostMdls();
+                    TxEvaluator txEvaluator = new TxEvaluator();
+
+                    val costMdls = new CostMdls();
                     costMdls.add(CostModelUtil.getCostModelFromProtocolParams(protocolParamsSupplier.getProtocolParams(), Language.PLUTUS_V2).orElseThrow());
-                    List<Redeemer> evalReedemers = txEvaluator.evaluateTx(txn, costMdls);
+
+                    val evalReedemers = txEvaluator.evaluateTx(txn, context.getUtxos(), costMdls);
 
                     List<Redeemer> redeemers = txn.getWitnessSet().getRedeemers();
                     for (Redeemer redeemer : redeemers) { // Update costs
@@ -131,7 +135,6 @@ public class VoteBatchReducer {
                                 .ifPresent(evalRedeemer -> redeemer.setExUnits(evalRedeemer.getExUnits()));
                     }
 
-                    // Remove all scripts from witness and just add one
                     txn.getWitnessSet().getPlutusV2Scripts().clear();
                     txn.getWitnessSet().getPlutusV2Scripts().add(plutusScriptUtil.getVoteBatcherContract());
                 })
