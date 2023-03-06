@@ -167,7 +167,7 @@ fn do_proof(
   self: MerkleTree<a>,
   item_hash: Hash<Sha2_256, ByteArray>,
   proof: Proof,
-  serialise_fn: fn(a) -> Hash<Sha2_256, a>,
+  serialise_fn: fn(a) -> ByteArray,
 ) -> Option<Proof> {
   when self is {
     Empty -> None
@@ -205,7 +205,7 @@ fn do_proof(
 pub fn get_proof(
   self: MerkleTree<a>,
   item: a,
-  serialise_fn: fn(a) -> Hash<Sha2_256, a>,
+  serialise_fn: fn(a) -> ByteArray,
 ) -> Option<Proof> {
   let empty: Proof = []
 
@@ -312,7 +312,7 @@ test get_proof_4() {
 fn do_from_list(
   items: List<a>,
   len: Int,
-  serialise_fn: fn(a) -> Hash<Sha2_256, a>,
+  serialise_fn: fn(a) -> ByteArray,
 ) -> MerkleTree<a> {
   when items is {
     [] -> Empty
@@ -341,7 +341,7 @@ fn do_from_list(
 /// preferably done off-chain.
 pub fn from_list(
   items: List<a>,
-  serialise_fn: fn(a) -> Hash<Sha2_256, a>,
+  serialise_fn: fn(a) -> ByteArray,
 ) -> MerkleTree<a> {
   do_from_list(items, list.length(items), serialise_fn)
 }
@@ -463,7 +463,7 @@ pub fn member_from_hash(
   item_hash: Hash<Sha2_256, a>,
   root_hash: Hash<Sha2_256, a>,
   proof: Proof,
-  serialise_fn: fn(a) -> Hash<Sha2_256, a>,
+  serialise_fn: fn(a) -> ByteArray,
 ) -> Bool {
   when proof is {
     [] -> root_hash == item_hash
@@ -493,7 +493,7 @@ pub fn member(
   item: a,
   root_hash: Hash<Sha2_256, ByteArray>,
   proof: Proof,
-  serialise_fn: fn(a) -> Hash<Sha2_256, a>,
+  serialise_fn: fn(a) -> ByteArray,
 ) -> Bool {
   let item_hash = sha2_256(serialise_fn(item))
   member_from_hash(item_hash, root_hash, proof, serialise_fn)
@@ -600,7 +600,7 @@ test member_6() {
 pub fn member_from_tree(
   tree: MerkleTree<a>,
   item: a,
-  serialise_fn: fn(a) -> Hash<Sha2_256, a>,
+  serialise_fn: fn(a) -> ByteArray,
 ) -> Bool {
   let proof: Option<Proof> = get_proof(tree, item, serialise_fn)
   let rh = root_hash(tree)
@@ -649,8 +649,8 @@ test member_from_tree_2() {
 
 fn get_proof_item_value(proof_item: ProofItem) -> Hash<Sha2_256, ByteArray> {
   when proof_item is {
-    Left(x) -> x
-    Right(y) -> y
+    Left(hash) -> hash
+    Right(hash) -> hash
   }
 }
 

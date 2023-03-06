@@ -33,8 +33,7 @@ import org.cardanofoundation.hydrapoc.commands.PlutusScriptUtil;
 import org.cardanofoundation.hydrapoc.commands.TransactionUtil;
 import org.cardanofoundation.hydrapoc.common.OperatorAccountProvider;
 import org.cardanofoundation.hydrapoc.importvote.VoteDatum;
-import org.cardanofoundation.merkle.MerkleHash;
-import org.cardanofoundation.merkle.MerkleTree;
+import org.cardanofoundation.merkle.core.MerkleTreeBuilder;
 import org.springframework.stereotype.Component;
 
 import java.math.BigInteger;
@@ -46,6 +45,7 @@ import java.util.stream.Collectors;
 
 import static com.bloxbean.cardano.client.common.ADAConversionUtil.adaToLovelace;
 import static com.bloxbean.cardano.client.common.CardanoConstants.LOVELACE;
+import static org.cardanofoundation.merkle.util.Hashing.sha2_256;
 
 @Component
 @RequiredArgsConstructor
@@ -64,8 +64,6 @@ public class VoteBatcher {
 
     //TODO -- check collateral return when new utxo added during balanceTx
     public String createAndPostBatchTransaction(int batchSize) throws Exception {
-        val merkleTree = new MerkleTree();
-
         PlutusV2Script voteBatcherScript = plutusScriptUtil.getVoteBatcherContract();
         String voteBatcherScriptAddress = plutusScriptUtil.getVoteBatcherContractAddress();
         String sender = operatorAccountProvider.getOperatorAddress();
@@ -79,10 +77,11 @@ public class VoteBatcher {
         }
 
         val resultBatchDatum = ResultBatchDatum.empty(0);
+        val items = new ArrayList<>();
+
         for (val tuple : utxoTuples) {
             val voteDatum = tuple._2;
-            val votePlutus = plutusObjectConverter.toPlutusData(voteDatum).serializeToBytes();
-            merkleTree.appendLeaf(MerkleHash.create(votePlutus).getValue());
+            items.add(voteDatum);
 
             val challengeProposalDatum = new ChallengeProposalDatum(voteDatum.getChallenge(), voteDatum.getProposal());
 
@@ -106,7 +105,7 @@ public class VoteBatcher {
                     log.warn("Invalid vote, " + voteDatum.getChoice());
             }
         }
-        merkleTree.buildTree();
+        val mt = MerkleTreeBuilder.createFromItems(items, vote -> sha2_256(plutusObjectConverter.toPlutusData(vote).serializeToBytes()));
 
         log.info("############# Input Votes ############");
         log.info(JsonUtil.getPrettyJson(utxoTuples.stream().map(utxoVoteDatumTuple -> utxoVoteDatumTuple._2).collect(Collectors.toList())));
@@ -140,7 +139,7 @@ public class VoteBatcher {
                         .steps(BigInteger.valueOf(0))
                         .build())
 
-                .redeemer(plutusObjectConverter.toPlutusData(CreateVoteBatchRedeemer.create(merkleTree)))
+                .redeemer(plutusObjectConverter.toPlutusData(CreateVoteBatchRedeemer.create(mt)))
                 .redeemerTag(RedeemerTag.Spend).build())
                 .collect(Collectors.toList());
 

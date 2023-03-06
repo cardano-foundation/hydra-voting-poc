@@ -5,7 +5,7 @@ import com.bloxbean.cardano.client.plutus.annotation.PlutusField;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
-import org.cardanofoundation.merkle.MerkleTree;
+import org.cardanofoundation.merkle.core.MerkleTree;
 
 @Data
 @AllArgsConstructor
