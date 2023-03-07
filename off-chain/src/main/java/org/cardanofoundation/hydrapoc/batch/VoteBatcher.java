@@ -33,7 +33,7 @@ import org.cardanofoundation.hydrapoc.commands.PlutusScriptUtil;
 import org.cardanofoundation.hydrapoc.commands.TransactionUtil;
 import org.cardanofoundation.hydrapoc.common.OperatorAccountProvider;
 import org.cardanofoundation.hydrapoc.importvote.VoteDatum;
-import org.cardanofoundation.merkle.core.MerkleTreeBuilder;
+import org.cardanofoundation.merkle.core.MerkleTree;
 import org.springframework.stereotype.Component;
 
 import java.math.BigInteger;
@@ -105,7 +105,7 @@ public class VoteBatcher {
                     log.warn("Invalid vote, " + voteDatum.getChoice());
             }
         }
-        val mt = MerkleTreeBuilder.createFromItems(voteDatums, vote -> sha2_256(plutusObjectConverter.toPlutusData(vote).serializeToBytes()));
+        val mt = MerkleTree.createFromItems(voteDatums, vote -> sha2_256(plutusObjectConverter.toPlutusData(vote).serializeToBytes()));
         resultBatchDatum.setMerkleRootHash(mt.rootHash());
 
         log.info("############# Input Votes ############");

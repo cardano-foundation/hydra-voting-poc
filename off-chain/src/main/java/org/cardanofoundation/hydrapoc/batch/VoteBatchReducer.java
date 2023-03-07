@@ -29,7 +29,7 @@ import org.cardanofoundation.hydrapoc.batch.data.input.ReduceVoteBatchRedeemer;
 import org.cardanofoundation.hydrapoc.commands.PlutusScriptUtil;
 import org.cardanofoundation.hydrapoc.commands.TransactionUtil;
 import org.cardanofoundation.hydrapoc.common.OperatorAccountProvider;
-import org.cardanofoundation.merkle.core.MerkleTreeBuilder;
+import org.cardanofoundation.merkle.core.MerkleTree;
 import org.springframework.stereotype.Component;
 
 import javax.annotation.Nullable;
@@ -77,7 +77,7 @@ public class VoteBatchReducer {
         }
 
         val results = utxoTuples.stream().map(t -> t._2).toList();
-        val mt = MerkleTreeBuilder.createFromItems(results, r -> {
+        val mt = MerkleTree.createFromItems(results, r -> {
             return sha2_256(plutusObjectConverter.toPlutusData(r).serializeToBytes());
         });
 

@@ -5,7 +5,7 @@ import com.bloxbean.cardano.client.plutus.annotation.PlutusField;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
-import org.cardanofoundation.merkle.core.MerkleTree;
+import org.cardanofoundation.merkle.core.IMerkleTree;
 
 @Data
 @AllArgsConstructor
@@ -14,9 +14,9 @@ import org.cardanofoundation.merkle.core.MerkleTree;
 public class CreateVoteBatchRedeemer {
 
     @PlutusField
-    private MerkleTree merkleTree;
+    private IMerkleTree merkleTree;
 
-    public static CreateVoteBatchRedeemer create(MerkleTree merkleTree) {
+    public static CreateVoteBatchRedeemer create(IMerkleTree merkleTree) {
         try {
             return new CreateVoteBatchRedeemer(merkleTree);
         } catch (Exception e) {
