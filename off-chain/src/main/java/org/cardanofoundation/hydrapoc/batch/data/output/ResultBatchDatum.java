@@ -2,10 +2,7 @@ package org.cardanofoundation.hydrapoc.batch.data.output;
 
 import com.bloxbean.cardano.client.plutus.annotation.Constr;
 import com.bloxbean.cardano.client.plutus.annotation.PlutusField;
-import com.bloxbean.cardano.client.transaction.spec.BigIntPlutusData;
-import com.bloxbean.cardano.client.transaction.spec.ConstrPlutusData;
-import com.bloxbean.cardano.client.transaction.spec.MapPlutusData;
-import com.bloxbean.cardano.client.transaction.spec.PlutusData;
+import com.bloxbean.cardano.client.transaction.spec.*;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
@@ -52,11 +49,14 @@ public class ResultBatchDatum {
             if (list.size() == 0)
                 return Optional.of(ResultBatchDatum.empty(-1)); // TODO iteration -1?
 
-            MapPlutusData map = (MapPlutusData) list.get(0);
-            BigIntPlutusData it = (BigIntPlutusData) list.get(1);
-            Iterator<Map.Entry<PlutusData, PlutusData>> entries = map.getMap().entrySet().iterator();
+            MapPlutusData resultsPDMap = (MapPlutusData) list.get(0);
+            BigIntPlutusData iterationPD = (BigIntPlutusData) list.get(1);
+            BytesPlutusData bytesPD = (BytesPlutusData) list.get(2);
 
-            ResultBatchDatum resultBatchDatum = ResultBatchDatum.empty(it.getValue().longValue());
+            Iterator<Map.Entry<PlutusData, PlutusData>> entries = resultsPDMap.getMap().entrySet().iterator();
+
+            ResultBatchDatum resultBatchDatum = ResultBatchDatum.empty(iterationPD.getValue().longValue());
+            resultBatchDatum.setMerkleRootHash(bytesPD.getValue());
 
             while (entries.hasNext()) {
                 Map.Entry<PlutusData, PlutusData> entry = entries.next();
