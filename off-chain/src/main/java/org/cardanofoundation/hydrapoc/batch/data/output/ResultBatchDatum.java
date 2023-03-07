@@ -8,9 +8,9 @@ import com.bloxbean.cardano.client.transaction.spec.MapPlutusData;
 import com.bloxbean.cardano.client.transaction.spec.PlutusData;
 import lombok.AllArgsConstructor;
 import lombok.Data;
-import lombok.NoArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
+import javax.annotation.Nullable;
 import java.util.*;
 
 @Constr(alternative = 0)
@@ -18,14 +18,19 @@ import java.util.*;
 @AllArgsConstructor
 @Slf4j
 public class ResultBatchDatum {
+
     @PlutusField
     private Map<ChallengeProposalDatum, ResultDatum> results;
+
+    @PlutusField
+    @Nullable
+    private byte[] merkleRootHash;
 
     @PlutusField
     private long iteration;
 
     public static ResultBatchDatum empty(long iteration) {
-        return new ResultBatchDatum(new LinkedHashMap<>(), iteration);
+        return new ResultBatchDatum(new LinkedHashMap<>(), null, iteration);
     }
 
     public void add(ChallengeProposalDatum challengeProposal, ResultDatum result) {
@@ -34,6 +39,10 @@ public class ResultBatchDatum {
 
     public ResultDatum get(ChallengeProposalDatum challengeProposal) {
         return results.get(challengeProposal);
+    }
+
+    public void setMerkleRootHash(@Nullable byte[] merkleRootHash) {
+        this.merkleRootHash = merkleRootHash;
     }
 
     public static Optional<ResultBatchDatum> deserialize(byte[] datum) {

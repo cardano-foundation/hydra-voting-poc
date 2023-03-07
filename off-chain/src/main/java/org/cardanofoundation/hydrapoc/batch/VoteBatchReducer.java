@@ -1,6 +1,5 @@
 package org.cardanofoundation.hydrapoc.batch;
 
-import com.bloxbean.cardano.aiken.tx.evaluator.SlotConfig;
 import com.bloxbean.cardano.aiken.tx.evaluator.TxEvaluator;
 import com.bloxbean.cardano.client.api.ProtocolParamsSupplier;
 import com.bloxbean.cardano.client.api.TransactionProcessor;
@@ -23,17 +22,17 @@ import com.bloxbean.cardano.client.plutus.impl.DefaultPlutusObjectConverter;
 import com.bloxbean.cardano.client.transaction.spec.*;
 import com.bloxbean.cardano.client.transaction.util.CostModelUtil;
 import com.bloxbean.cardano.client.util.JsonUtil;
-import com.bloxbean.cardano.client.util.Tuple;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import lombok.val;
 import org.cardanofoundation.hydrapoc.batch.data.input.ReduceVoteBatchRedeemer;
-import org.cardanofoundation.hydrapoc.batch.data.output.ResultBatchDatum;
 import org.cardanofoundation.hydrapoc.commands.PlutusScriptUtil;
 import org.cardanofoundation.hydrapoc.commands.TransactionUtil;
 import org.cardanofoundation.hydrapoc.common.OperatorAccountProvider;
+import org.cardanofoundation.merkle.core.MerkleTreeBuilder;
 import org.springframework.stereotype.Component;
 
+import javax.annotation.Nullable;
 import java.math.BigInteger;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -43,7 +42,8 @@ import java.util.stream.Collectors;
 
 import static com.bloxbean.cardano.client.common.ADAConversionUtil.adaToLovelace;
 import static com.bloxbean.cardano.client.common.CardanoConstants.LOVELACE;
-import static org.cardanofoundation.hydrapoc.batch.util.CountVoteUtil.groupResultBatchDatumTuples;
+import static org.cardanofoundation.hydrapoc.batch.util.CountVoteUtil.groupResultBatchDatum;
+import static org.cardanofoundation.merkle.util.Hashing.sha2_256;
 
 @Component
 @RequiredArgsConstructor
@@ -61,24 +61,32 @@ public class VoteBatchReducer {
     private PlutusObjectConverter plutusObjectConverter = new DefaultPlutusObjectConverter();
 
     //TODO -- check collateral return when new utxo added during balanceTx
+    @Nullable
     public String postReduceBatchTransaction(int batchSize, long iteration) throws Exception {
         PlutusV2Script voteBatcherScript = plutusScriptUtil.getVoteBatcherContract();
         String voteBatcherScriptAddress = plutusScriptUtil.getVoteBatcherContractAddress();
         String sender = operatorAccountProvider.getOperatorAddress();
+
         log.info("Sender Address: " + sender);
         log.info("Script Address: " + voteBatcherScriptAddress);
 
-        List<Tuple<Utxo, ResultBatchDatum>> utxoTuples = voteUtxoFinder.getUtxosWithVoteBatches(batchSize, iteration);
+        val utxoTuples = voteUtxoFinder.getUtxosWithVoteBatches(batchSize, iteration);
         if (utxoTuples.size() == 0) {
             log.warn("No utxo found");
             return null;
         }
 
+        val results = utxoTuples.stream().map(t -> t._2).toList();
+        val mt = MerkleTreeBuilder.createFromItems(results, r -> {
+            return sha2_256(plutusObjectConverter.toPlutusData(r).serializeToBytes());
+        });
+
         // Calculate group result batch datum
-        ResultBatchDatum reduceVoteBatchDatum = groupResultBatchDatumTuples(utxoTuples, iteration + 1);
+        val reduceVoteBatchDatum = groupResultBatchDatum(results, iteration + 1);
+        reduceVoteBatchDatum.setMerkleRootHash(mt.rootHash());
 
         log.info("############# Input Vote Batches ############");
-        log.info(JsonUtil.getPrettyJson(utxoTuples.stream().map(utxoVoteBatch -> utxoVoteBatch._2).collect(Collectors.toList())));
+        log.info(JsonUtil.getPrettyJson(results));
         log.info("########### Reduced Result Datum #############");
         log.info(JsonUtil.getPrettyJson(reduceVoteBatchDatum));
 
@@ -100,7 +108,7 @@ public class VoteBatchReducer {
         List<Utxo> scriptUtxos = utxoTuples.stream().map(utxoVoteDatumTuple -> utxoVoteDatumTuple._1)
                 .collect(Collectors.toList());
 
-        List<ScriptCallContext> scriptCallContexts = scriptUtxos.stream().map(utxo -> ScriptCallContext
+        val scriptCallContexts = scriptUtxos.stream().map(utxo -> ScriptCallContext
                 .builder()
                 .script(voteBatcherScript)
                 .utxo(utxo)
@@ -109,7 +117,8 @@ public class VoteBatchReducer {
                         .steps(BigInteger.valueOf(0))
                         .build())
                 .redeemer(plutusObjectConverter.toPlutusData(ReduceVoteBatchRedeemer.create(iteration)))
-                .redeemerTag(RedeemerTag.Spend).build()).collect(Collectors.toList());
+                .redeemerTag(RedeemerTag.Spend).build())
+                .toList();
 
         TxBuilder txBuilder = output.outputBuilder()
                 .buildInputs(InputBuilders.createFromUtxos(scriptUtxos, sender))

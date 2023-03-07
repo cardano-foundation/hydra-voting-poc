@@ -1,6 +1,5 @@
 use aiken/builtin
 use aiken/dict.{Dict}
-use aiken/hash.{Blake2b_224, Hash}
 use aiken/list
 use aiken/option
 use aiken/transaction.{
@@ -43,23 +42,20 @@ type Result {
   abstain: VotingPower,
 }
 
-// batch_size: Int?
 // respective pubkey hashes for authorised parties
-// should we put root hash of the big merkle tree here?
 type VotingDatum {
 }
 
 type ResultsBatchDatum {
-  //merke_tree_root: String
   results: Dict<ChallengeProposal, Result>,
-  // seq
+  merkle_root_hash: Option<ByteArray>,
   iteration: Int,
 }
 
 type Redeemer {
   // Approve { merkle_tree: MerkleTree<Vote> }
   CreateVoteBatch { merkle_tree: MerkleTree<Vote> }
-  ReduceVoteBatch { id: Hash<Blake2b_224, String>, iteration: Int }
+  ReduceVoteBatch { merkle_tree: MerkleTree<ResultsBatchDatum>, iteration: Int }
 }
 
 // Note:
@@ -74,6 +70,7 @@ validator voting {
 
     when redeemer is {
       CreateVoteBatch { merkle_tree } -> {
+        let merkle_root_hash = mt.root_hash(merkle_tree)
         // we sum all votes and output in the ResultsBatchDatum
         // and somehow verify id of the batch and total votes in the batch
         // alternatively use normal inputs
@@ -81,13 +78,19 @@ validator voting {
         let results: Dict<ChallengeProposal, Result> = count_votes(votes)
         // now we need to check if any of the output UTxOs contains results
         // now we have to check if batch_id matches
-        let output_datum = ResultsBatchDatum { results, iteration: 0 }
+        let output_datum =
+          ResultsBatchDatum {
+            results,
+            iteration: 0,
+            merkle_root_hash: Some(merkle_root_hash),
+          }
         validate_votes(votes, merkle_tree) && results_must_match(
           outputs: sc.transaction.outputs,
           expected_results: output_datum,
         ) && result_sent_to_own_address_match(inputs, outputs, output_reference)
       }
-      ReduceVoteBatch { id: _id, iteration } -> {
+      ReduceVoteBatch { merkle_tree, iteration } -> {
+        let merkle_tree_root_hash = mt.root_hash(merkle_tree)
         // collect results from all inputs (fail if there are still votes in smart contract)
         // take existing results and compress them, into one
         // check if resulting output datum contains votes counted up properly and that they send result back to the same address
@@ -99,11 +102,15 @@ validator voting {
             vote_results: all_results,
             new_iteration: new_iteration,
           )
-        results_must_match(outputs, one_final_result) && result_sent_to_own_address_match(
-          inputs,
+        let one_final_result_with_hash =
+          ResultsBatchDatum {
+            ..one_final_result,
+            merkle_root_hash: Some(merkle_tree_root_hash),
+          }
+        validate_results(all_results, merkle_tree) && results_must_match(
           outputs,
-          output_reference,
-        )
+          one_final_result_with_hash,
+        ) && result_sent_to_own_address_match(inputs, outputs, output_reference)
       }
       _ -> False
     }
@@ -144,17 +151,31 @@ fn results_must_match(
 }
 
 fn validate_votes(votes: List<Vote>, merkle_tree: MerkleTree<Vote>) -> Bool {
-  let vote_ser_fn = fn(v: Vote) { builtin.serialise_data(v) }
+  let ser_fn = fn(v: Vote) { builtin.serialise_data(v) }
 
   let all_votes_present_match =
-    list.all(
-      votes,
-      fn(vote) { mt.member_from_tree(merkle_tree, vote, vote_ser_fn) },
-    )
+    list.all(votes, fn(vote) { mt.member_from_tree(merkle_tree, vote, ser_fn) })
 
   let leaf_size_match = mt.size(merkle_tree) == list.length(votes)
 
   all_votes_present_match && leaf_size_match
+}
+
+fn validate_results(
+  results: List<ResultsBatchDatum>,
+  merkle_tree: MerkleTree<ResultsBatchDatum>,
+) -> Bool {
+  let ser_fn = fn(r: ResultsBatchDatum) { builtin.serialise_data(r) }
+
+  let all_results_present_match =
+    list.all(
+      results,
+      fn(result) { mt.member_from_tree(merkle_tree, result, ser_fn) },
+    )
+
+  let leaf_size_match = mt.size(merkle_tree) == list.length(results)
+
+  all_results_present_match && leaf_size_match
 }
 
 fn get_votes_from_inputs(inputs: List<Input>) -> List<Vote> {
@@ -201,10 +222,17 @@ fn count_vote_results(
         compare: challenge_proposal.compare,
       ),
       iteration: new_iteration,
+      merkle_root_hash: None,
     }
   }
+
   // assign new iteration
-  let zero = ResultsBatchDatum { results: dict.new(), iteration: new_iteration }
+  let zero =
+    ResultsBatchDatum {
+      results: dict.new(),
+      iteration: new_iteration,
+      merkle_root_hash: None,
+    }
 
   list.foldl(vote_results, merging_fn, zero)
 }

@@ -77,11 +77,11 @@ public class VoteBatcher {
         }
 
         val resultBatchDatum = ResultBatchDatum.empty(0);
-        val items = new ArrayList<>();
+        val voteDatums = new ArrayList<>();
 
         for (val tuple : utxoTuples) {
             val voteDatum = tuple._2;
-            items.add(voteDatum);
+            voteDatums.add(voteDatum);
 
             val challengeProposalDatum = new ChallengeProposalDatum(voteDatum.getChallenge(), voteDatum.getProposal());
 
@@ -105,7 +105,8 @@ public class VoteBatcher {
                     log.warn("Invalid vote, " + voteDatum.getChoice());
             }
         }
-        val mt = MerkleTreeBuilder.createFromItems(items, vote -> sha2_256(plutusObjectConverter.toPlutusData(vote).serializeToBytes()));
+        val mt = MerkleTreeBuilder.createFromItems(voteDatums, vote -> sha2_256(plutusObjectConverter.toPlutusData(vote).serializeToBytes()));
+        resultBatchDatum.setMerkleRootHash(mt.rootHash());
 
         log.info("############# Input Votes ############");
         log.info(JsonUtil.getPrettyJson(utxoTuples.stream().map(utxoVoteDatumTuple -> utxoVoteDatumTuple._2).collect(Collectors.toList())));
@@ -141,7 +142,7 @@ public class VoteBatcher {
 
                 .redeemer(plutusObjectConverter.toPlutusData(CreateVoteBatchRedeemer.create(mt)))
                 .redeemerTag(RedeemerTag.Spend).build())
-                .collect(Collectors.toList());
+                .toList();
 
         var txBuilder = output.outputBuilder()
                 .buildInputs(InputBuilders.createFromUtxos(scriptUtxos, sender))

@@ -336,7 +336,7 @@ fn do_from_list(
   }
 }
 
-/// Construct a 'MerkleTree' from a list of hashes.
+/// Construct a 'MerkleTree' from a list of elements.
 /// Note that, while this operation is doable on-chain, it is expensive and
 /// preferably done off-chain.
 pub fn from_list(
@@ -453,6 +453,36 @@ test from_5() {
       right: Leaf { hash: sha2_256(serialise_fn(horse)) },
     },
   } == mt
+}
+
+fn do_from_hashes_list(
+  items: List<Hash<Sha2_256, a>>,
+  len: Int,
+) -> MerkleTree<a> {
+  when items is {
+    [] -> Empty
+    [hashed_item] -> Leaf { hash: hashed_item }
+    all -> {
+      let cutoff: Int = len / 2
+      let left =
+        all
+        |> list.take(cutoff)
+        |> do_from_hashes_list(cutoff)
+      let right =
+        all
+        |> list.drop(cutoff)
+        |> do_from_hashes_list(len - cutoff)
+      let hash = combine_hash(root_hash(left), root_hash(right))
+      Node { hash, left, right }
+    }
+  }
+}
+
+/// Construct a 'MerkleTree' from a list of hashes.
+/// Note that, while this operation is doable on-chain, it is expensive and
+/// preferably done off-chain.
+pub fn from_hashes_list(items: List<Hash<Sha2_256, a>>) -> MerkleTree<a> {
+  do_from_hashes_list(items, list.length(items))
 }
 
 // Check whether a hashed element is part of a 'MerkleTree' using only its root hash
