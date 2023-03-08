@@ -454,77 +454,77 @@ test from_5() {
   } == mt
 }
 
-// fn do_from_hashes_list(
-//   items: List<Hash<Sha2_256, a>>,
-//   len: Int,
-// ) -> MerkleElement<a> {
-//   when items is {
-//     [] -> Empty
-//     [hashed_item] -> Leaf { hash: hashed_item }
-//     all -> {
-//       let cutoff: Int = len / 2
-//       let left =
-//         all
-//         |> list.take(cutoff)
-//         |> do_from_hashes_list(cutoff)
-//       let right =
-//         all
-//         |> list.drop(cutoff)
-//         |> do_from_hashes_list(len - cutoff)
-//       let hash = combine_hash(element_hash(left), element_hash(right))
-//       Node { hash, left, right }
-//     }
-//   }
-// }
+fn do_from_hashes_list(
+  items: List<Hash<Sha2_256, a>>,
+  len: Int,
+) -> MerkleElement<a> {
+  when items is {
+    [] -> Empty
+    [hashed_item] -> Leaf { hash: hashed_item }
+    all -> {
+      let cutoff: Int = len / 2
+      let left =
+        all
+        |> list.take(cutoff)
+        |> do_from_hashes_list(cutoff)
+      let right =
+        all
+        |> list.drop(cutoff)
+        |> do_from_hashes_list(len - cutoff)
+      let hash = combine_hash(element_hash(left), element_hash(right))
+      Node { hash, left, right }
+    }
+  }
+}
 
-// /// Construct a 'MerkleTree' from a list of hashes.
-// /// Note that, while this operation is doable on-chain, it is expensive and
-// /// preferably done off-chain.
-// pub fn from_hashes_list(items: List<Hash<Sha2_256, a>>) -> MerkleElement<a> {
-//   do_from_hashes_list(items, list.length(items))
-// }
+/// Construct a 'MerkleTree' from a list of hashes.
+/// Note that, while this operation is doable on-chain, it is expensive and
+/// preferably done off-chain.
+pub fn from_hashes_list(items: List<Hash<Sha2_256, a>>) -> MerkleElement<a> {
+  do_from_hashes_list(items, list.length(items))
+}
 
-// test from_hashes_list_5() {
-//   let dog = @"dog"
-//   let cat = @"cat"
-//   let mouse = @"mouse"
-//   let horse = @"horse"
+test from_hashes_list_5() {
+  let dog = @"dog"
+  let cat = @"cat"
+  let mouse = @"mouse"
+  let horse = @"horse"
 
-//   let serialise_fn = create_string_item_serialise_fn()
+  let serialise_fn = create_string_item_serialise_fn()
 
-//   let items = [dog, cat, mouse, horse]
-//   let hashes_items = list.map(items, fn(item) { sha2_256(serialise_fn(item)) })
+  let items = [dog, cat, mouse, horse]
+  let hashes_items = list.map(items, fn(item) { sha2_256(serialise_fn(item)) })
 
-//   let mt = from_hashes_list(hashes_items)
+  let mt = from_hashes_list(hashes_items)
 
-//   let left_node_hash =
-//     sha2_256(
-//       bytearray.concat(sha2_256(serialise_fn(dog)), sha2_256(serialise_fn(cat))),
-//     )
-//   let right_node_hash =
-//     sha2_256(
-//       bytearray.concat(
-//         sha2_256(serialise_fn(mouse)),
-//         sha2_256(serialise_fn(horse)),
-//       ),
-//     )
+  let left_node_hash =
+    sha2_256(
+      bytearray.concat(sha2_256(serialise_fn(dog)), sha2_256(serialise_fn(cat))),
+    )
+  let right_node_hash =
+    sha2_256(
+      bytearray.concat(
+        sha2_256(serialise_fn(mouse)),
+        sha2_256(serialise_fn(horse)),
+      ),
+    )
 
-//   let element_hash = sha2_256(bytearray.concat(left_node_hash, right_node_hash))
+  let element_hash = sha2_256(bytearray.concat(left_node_hash, right_node_hash))
 
-//   Node {
-//     hash: element_hash,
-//     left: Node {
-//       hash: left_node_hash,
-//       left: Leaf { hash: sha2_256(serialise_fn(dog)) },
-//       right: Leaf { hash: sha2_256(serialise_fn(cat)) },
-//     },
-//     right: Node {
-//       hash: right_node_hash,
-//       left: Leaf { hash: sha2_256(serialise_fn(mouse)) },
-//       right: Leaf { hash: sha2_256(serialise_fn(horse)) },
-//     },
-//   } == mt
-// }
+  Node {
+    hash: element_hash,
+    left: Node {
+      hash: left_node_hash,
+      left: Leaf { hash: sha2_256(serialise_fn(dog)) },
+      right: Leaf { hash: sha2_256(serialise_fn(cat)) },
+    },
+    right: Node {
+      hash: right_node_hash,
+      left: Leaf { hash: sha2_256(serialise_fn(mouse)) },
+      right: Leaf { hash: sha2_256(serialise_fn(horse)) },
+    },
+  } == mt
+}
 
 // Check whether a hashed element is part of a 'MerkleTree' using only its root hash
 // and a 'Proof'. The proof is guaranteed to be in log(n) of the size of the
