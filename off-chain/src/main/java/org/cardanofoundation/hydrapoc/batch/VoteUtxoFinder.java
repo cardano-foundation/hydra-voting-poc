@@ -8,6 +8,7 @@ import com.bloxbean.cardano.client.util.HexUtil;
 import com.bloxbean.cardano.client.util.Tuple;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import lombok.val;
 import org.cardanofoundation.hydrapoc.batch.data.output.ResultBatchDatum;
 import org.cardanofoundation.hydrapoc.commands.PlutusScriptUtil;
 import org.cardanofoundation.hydrapoc.importvote.VoteDatum;
@@ -53,7 +54,7 @@ public class VoteUtxoFinder {
                         return new Tuple<>(utxo, voteDatum.orElse(null));
                     })
                     .filter(utxoOptionalTuple -> utxoOptionalTuple._2 != null)
-                    .collect(Collectors.toList());
+                    .toList();
 
             utxos.addAll(utxoTuples);
             if (utxos.size() >= batchSize) {
@@ -74,7 +75,7 @@ public class VoteUtxoFinder {
             log.error("Error", e);
             return Collections.EMPTY_LIST;
         }
-        boolean isContinue = true;
+        var isContinue = true;
         List<Tuple<Utxo, ResultBatchDatum>> utxos = new ArrayList<>();
         int page = 0;
         while (isContinue) {
@@ -84,15 +85,14 @@ public class VoteUtxoFinder {
                 continue;
             }
 
-            List<Tuple<Utxo, ResultBatchDatum>> utxoTuples = utxoList.stream()
+            val utxoTuples = utxoList.stream()
                     .filter(utxo -> StringUtils.hasLength(utxo.getInlineDatum()))
                     .map(utxo -> {
                         Optional<ResultBatchDatum> resultBatchDatumOptional = ResultBatchDatum.deserialize(HexUtil.decodeHexString(utxo.getInlineDatum()));
 
                         return new Tuple<>(utxo, resultBatchDatumOptional.orElse(null));
                     })
-                    .filter(utxoOptionalTuple -> utxoOptionalTuple._2 != null && utxoOptionalTuple._2.getIteration() == iteration)
-                    .collect(Collectors.toList());
+                    .filter(utxoOptionalTuple -> utxoOptionalTuple._2 != null && utxoOptionalTuple._2.getIteration() == iteration).toList();
 
             utxos.addAll(utxoTuples);
             if (utxos.size() >= batchSize) {
@@ -102,6 +102,7 @@ public class VoteUtxoFinder {
         }
 
         log.info(utxos.toString());
+
         return utxos;
     }
 }

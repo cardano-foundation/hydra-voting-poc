@@ -5,12 +5,8 @@ import com.bloxbean.cardano.client.api.ProtocolParamsSupplier;
 import com.bloxbean.cardano.client.api.TransactionProcessor;
 import com.bloxbean.cardano.client.api.UtxoSupplier;
 import com.bloxbean.cardano.client.api.model.Amount;
-import com.bloxbean.cardano.client.api.model.Result;
-import com.bloxbean.cardano.client.api.model.Utxo;
-import com.bloxbean.cardano.client.coinselection.UtxoSelectionStrategy;
 import com.bloxbean.cardano.client.coinselection.impl.DefaultUtxoSelectionStrategyImpl;
 import com.bloxbean.cardano.client.function.Output;
-import com.bloxbean.cardano.client.function.TxBuilder;
 import com.bloxbean.cardano.client.function.TxBuilderContext;
 import com.bloxbean.cardano.client.function.helper.BalanceTxBuilders;
 import com.bloxbean.cardano.client.function.helper.CollateralBuilders;
@@ -19,7 +15,10 @@ import com.bloxbean.cardano.client.function.helper.ScriptCallContextProviders;
 import com.bloxbean.cardano.client.function.helper.model.ScriptCallContext;
 import com.bloxbean.cardano.client.plutus.api.PlutusObjectConverter;
 import com.bloxbean.cardano.client.plutus.impl.DefaultPlutusObjectConverter;
-import com.bloxbean.cardano.client.transaction.spec.*;
+import com.bloxbean.cardano.client.transaction.spec.CostMdls;
+import com.bloxbean.cardano.client.transaction.spec.ExUnits;
+import com.bloxbean.cardano.client.transaction.spec.Language;
+import com.bloxbean.cardano.client.transaction.spec.RedeemerTag;
 import com.bloxbean.cardano.client.transaction.util.CostModelUtil;
 import com.bloxbean.cardano.client.util.JsonUtil;
 import lombok.RequiredArgsConstructor;
@@ -32,13 +31,10 @@ import org.cardanofoundation.hydrapoc.common.OperatorAccountProvider;
 import org.cardanofoundation.merkle.core.MerkleTree;
 import org.springframework.stereotype.Component;
 
-import javax.annotation.Nullable;
 import java.math.BigInteger;
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.List;
-import java.util.Set;
-import java.util.stream.Collectors;
+import java.util.Optional;
 
 import static com.bloxbean.cardano.client.common.ADAConversionUtil.adaToLovelace;
 import static com.bloxbean.cardano.client.common.CardanoConstants.LOVELACE;
@@ -61,11 +57,10 @@ public class VoteBatchReducer {
     private PlutusObjectConverter plutusObjectConverter = new DefaultPlutusObjectConverter();
 
     //TODO -- check collateral return when new utxo added during balanceTx
-    @Nullable
-    public String postReduceBatchTransaction(int batchSize, long iteration) throws Exception {
-        PlutusV2Script voteBatcherScript = plutusScriptUtil.getVoteBatcherContract();
-        String voteBatcherScriptAddress = plutusScriptUtil.getVoteBatcherContractAddress();
-        String sender = operatorAccountProvider.getOperatorAddress();
+    public Optional<String> postReduceBatchTransaction(int batchSize, long iteration) throws Exception {
+        val voteBatcherScript = plutusScriptUtil.getVoteBatcherContract();
+        val voteBatcherScriptAddress = plutusScriptUtil.getVoteBatcherContractAddress();
+        val sender = operatorAccountProvider.getOperatorAddress();
 
         log.info("Sender Address: " + sender);
         log.info("Script Address: " + voteBatcherScriptAddress);
@@ -73,7 +68,7 @@ public class VoteBatchReducer {
         val utxoTuples = voteUtxoFinder.getUtxosWithVoteBatches(batchSize, iteration);
         if (utxoTuples.size() == 0) {
             log.warn("No utxo found");
-            return null;
+            return Optional.empty();
         }
 
         val results = utxoTuples.stream().map(t -> t._2).toList();
@@ -91,13 +86,13 @@ public class VoteBatchReducer {
         log.info(JsonUtil.getPrettyJson(reduceVoteBatchDatum));
 
         // Build and post contract txn
-        UtxoSelectionStrategy utxoSelectionStrategy = new DefaultUtxoSelectionStrategyImpl(utxoSupplier);
-        Set<Utxo> collateralUtxos =
+        val utxoSelectionStrategy = new DefaultUtxoSelectionStrategyImpl(utxoSupplier);
+        val collateralUtxos =
                 utxoSelectionStrategy.select(sender, new Amount(LOVELACE, adaToLovelace(10)), Collections.emptySet());
 
         // Build the expected output
-        PlutusData outputDatum = plutusObjectConverter.toPlutusData(reduceVoteBatchDatum);
-        Output output = Output.builder()
+        val outputDatum = plutusObjectConverter.toPlutusData(reduceVoteBatchDatum);
+        val output = Output.builder()
                 .address(voteBatcherScriptAddress)
                 .datum(outputDatum)
                 .inlineDatum(true)
@@ -105,8 +100,8 @@ public class VoteBatchReducer {
                 .qty(adaToLovelace(1))
                 .build();
 
-        List<Utxo> scriptUtxos = utxoTuples.stream().map(utxoVoteDatumTuple -> utxoVoteDatumTuple._1)
-                .collect(Collectors.toList());
+        val scriptUtxos = utxoTuples.stream().map(utxoVoteDatumTuple -> utxoVoteDatumTuple._1)
+                .toList();
 
         val scriptCallContexts = scriptUtxos.stream().map(utxo -> ScriptCallContext
                 .builder()
@@ -120,12 +115,11 @@ public class VoteBatchReducer {
                 .redeemerTag(RedeemerTag.Spend).build())
                 .toList();
 
-        TxBuilder txBuilder = output.outputBuilder()
+        var txBuilder = output.outputBuilder()
                 .buildInputs(InputBuilders.createFromUtxos(scriptUtxos, sender))
                 .andThen(CollateralBuilders.collateralOutputs(sender, new ArrayList<>(collateralUtxos))); //CIP-40
 
-        // Loop and add scriptCallContexts
-        for (var scriptCallContext : scriptCallContexts) {
+        for (val scriptCallContext : scriptCallContexts) {
             txBuilder = txBuilder.andThen(ScriptCallContextProviders.createFromScriptCallContext(scriptCallContext));
         }
 
@@ -148,10 +142,10 @@ public class VoteBatchReducer {
                 })
                 .andThen(BalanceTxBuilders.balanceTx(sender, 1));
 
-        TxBuilderContext txBuilderContext = TxBuilderContext.init(utxoSupplier, protocolParamsSupplier);
-        Transaction transaction = txBuilderContext.buildAndSign(txBuilder, operatorAccountProvider.getTxSigner());
+        val txBuilderContext = TxBuilderContext.init(utxoSupplier, protocolParamsSupplier);
+        val transaction = txBuilderContext.buildAndSign(txBuilder, operatorAccountProvider.getTxSigner());
 
-        Result<String> result = transactionProcessor.submitTransaction(transaction.serialize());
+        val result = transactionProcessor.submitTransaction(transaction.serialize());
         if (!result.isSuccessful()) {
             throw new RuntimeException("Transaction failed. " + result.getResponse());
         }
@@ -160,7 +154,7 @@ public class VoteBatchReducer {
 
         transactionUtil.waitForTransaction(result);
 
-        return result.getValue();
+        return Optional.of(result.getValue());
     }
 
 }
