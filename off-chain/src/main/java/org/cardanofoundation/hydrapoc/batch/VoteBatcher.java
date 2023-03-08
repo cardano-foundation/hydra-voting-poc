@@ -106,7 +106,7 @@ public class VoteBatcher {
             }
         }
         val mt = MerkleTree.createFromItems(voteDatums, vote -> sha2_256(plutusObjectConverter.toPlutusData(vote).serializeToBytes()));
-        resultBatchDatum.setMerkleRootHash(mt.rootHash());
+        resultBatchDatum.setMerkleRootHash(mt.elementHash());
 
         log.info("############# Input Votes ############");
         log.info(JsonUtil.getPrettyJson(utxoTuples.stream().map(utxoVoteDatumTuple -> utxoVoteDatumTuple._2).collect(Collectors.toList())));

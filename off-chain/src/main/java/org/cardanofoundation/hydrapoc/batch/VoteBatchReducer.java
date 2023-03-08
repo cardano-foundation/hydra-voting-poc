@@ -83,7 +83,7 @@ public class VoteBatchReducer {
 
         // Calculate group result batch datum
         val reduceVoteBatchDatum = groupResultBatchDatum(results, iteration + 1);
-        reduceVoteBatchDatum.setMerkleRootHash(mt.rootHash());
+        reduceVoteBatchDatum.setMerkleRootHash(mt.elementHash());
 
         log.info("############# Input Vote Batches ############");
         log.info(JsonUtil.getPrettyJson(results));
@@ -116,7 +116,7 @@ public class VoteBatchReducer {
                         .mem(BigInteger.valueOf(0))
                         .steps(BigInteger.valueOf(0))
                         .build())
-                .redeemer(plutusObjectConverter.toPlutusData(ReduceVoteBatchRedeemer.create(iteration)))
+                .redeemer(plutusObjectConverter.toPlutusData(ReduceVoteBatchRedeemer.create(mt, iteration)))
                 .redeemerTag(RedeemerTag.Spend).build())
                 .toList();
 
