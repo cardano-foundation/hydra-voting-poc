@@ -22,7 +22,7 @@ pub type ProofItem {
 }
 
 // Function returning a hash of a given Merkle Tree element
-pub fn root_hash(self: MerkleElement<a>) -> Hash<Sha2_256, ByteArray> {
+pub fn element_hash(self: MerkleElement<a>) -> Hash<Sha2_256, ByteArray> {
   when self is {
     Empty -> #""
     Leaf { hash } -> hash
@@ -30,7 +30,7 @@ pub fn root_hash(self: MerkleElement<a>) -> Hash<Sha2_256, ByteArray> {
   }
 }
 
-test root_hash_1() {
+test element_hash_1() {
   let dog = @"dog"
   let items = [dog]
   let serialise_fn = create_string_item_serialise_fn()
@@ -39,10 +39,10 @@ test root_hash_1() {
 
   let node_hash = sha2_256(serialise_fn(dog))
 
-  root_hash(mt) == node_hash
+  element_hash(mt) == node_hash
 }
 
-test root_hash_3() {
+test element_hash_3() {
   let dog = @"dog"
   let cat = @"cat"
   let mouse = @"mouse"
@@ -60,24 +60,24 @@ test root_hash_3() {
     )
   let rh = sha2_256(bytearray.concat(sha2_256(serialise_fn(dog)), node_hash))
 
-  expect Node { hash: root_hash, .. } = mt
+  expect Node { hash: element_hash, .. } = mt
 
-  rh == root_hash
+  rh == element_hash
 }
 
-test root_hash_2() {
+test element_hash_2() {
   let items = []
   let serialise_fn = create_string_item_serialise_fn()
   let mt = from_list(items, serialise_fn)
 
   let node_hash = #""
 
-  root_hash(mt) == node_hash
+  element_hash(mt) == node_hash
 }
 
 /// Function atests whether two Merkle Tress are equal, this is the case when their root hashes match.
 pub fn is_equal(left: MerkleElement<a>, right: MerkleElement<a>) -> Bool {
-  root_hash(left) == root_hash(right)
+  element_hash(left) == element_hash(right)
 }
 
 /// Function returns a total numbers of leaves in the tree.
@@ -177,8 +177,8 @@ fn do_proof(
         None
       }
     Node { left, right, .. } -> {
-      let rh = root_hash(right)
-      let lh = root_hash(left)
+      let rh = element_hash(right)
+      let lh = element_hash(left)
       let go_left: Option<Proof> =
         do_proof(
           left,
@@ -329,7 +329,7 @@ fn do_from_list(
         all
         |> list.drop(cutoff)
         |> do_from_list(len - cutoff, serialise_fn)
-      let hash = combine_hash(root_hash(left), root_hash(right))
+      let hash = combine_hash(element_hash(left), element_hash(right))
       Node { hash, left, right }
     }
   }
@@ -371,13 +371,13 @@ test from_3() {
   let serialise_fn = create_string_item_serialise_fn()
   let mt = from_list(items, serialise_fn)
 
-  let root_hash =
+  let element_hash =
     sha2_256(
       bytearray.concat(sha2_256(serialise_fn(dog)), sha2_256(serialise_fn(cat))),
     )
 
   Node {
-    hash: root_hash,
+    hash: element_hash,
     left: Leaf { hash: sha2_256(serialise_fn(dog)) },
     right: Leaf { hash: sha2_256(serialise_fn(cat)) },
   } == mt
@@ -400,11 +400,11 @@ test from_4() {
         sha2_256(serialise_fn(mouse)),
       ),
     )
-  let root_hash =
+  let element_hash =
     sha2_256(bytearray.concat(sha2_256(serialise_fn(dog)), node_hash))
 
   Node {
-    hash: root_hash,
+    hash: element_hash,
     left: Leaf { hash: sha2_256(serialise_fn(dog)) },
     right: Node {
       hash: node_hash,
@@ -437,10 +437,10 @@ test from_5() {
       ),
     )
 
-  let root_hash = sha2_256(bytearray.concat(left_node_hash, right_node_hash))
+  let element_hash = sha2_256(bytearray.concat(left_node_hash, right_node_hash))
 
   Node {
-    hash: root_hash,
+    hash: element_hash,
     left: Node {
       hash: left_node_hash,
       left: Leaf { hash: sha2_256(serialise_fn(dog)) },
@@ -471,7 +471,7 @@ test from_5() {
 //         all
 //         |> list.drop(cutoff)
 //         |> do_from_hashes_list(len - cutoff)
-//       let hash = combine_hash(root_hash(left), root_hash(right))
+//       let hash = combine_hash(element_hash(left), element_hash(right))
 //       Node { hash, left, right }
 //     }
 //   }
@@ -509,10 +509,10 @@ test from_5() {
 //       ),
 //     )
 
-//   let root_hash = sha2_256(bytearray.concat(left_node_hash, right_node_hash))
+//   let element_hash = sha2_256(bytearray.concat(left_node_hash, right_node_hash))
 
 //   Node {
-//     hash: root_hash,
+//     hash: element_hash,
 //     left: Node {
 //       hash: left_node_hash,
 //       left: Leaf { hash: sha2_256(serialise_fn(dog)) },
@@ -532,25 +532,25 @@ test from_5() {
 // place.
 pub fn member_from_hash(
   item_hash: Hash<Sha2_256, a>,
-  root_hash: Hash<Sha2_256, a>,
+  element_hash: Hash<Sha2_256, a>,
   proof: Proof,
   serialise_fn: fn(a) -> ByteArray,
 ) -> Bool {
   when proof is {
-    [] -> root_hash == item_hash
+    [] -> element_hash == item_hash
     [head, ..tail] ->
       when head is {
         Left { hash: l } ->
           member_from_hash(
             combine_hash(l, item_hash),
-            root_hash,
+            element_hash,
             tail,
             serialise_fn,
           )
         Right { hash: r } ->
           member_from_hash(
             combine_hash(item_hash, r),
-            root_hash,
+            element_hash,
             tail,
             serialise_fn,
           )
@@ -562,12 +562,12 @@ pub fn member_from_hash(
 // and a 'Proof'.
 pub fn member(
   item: a,
-  root_hash: Hash<Sha2_256, ByteArray>,
+  element_hash: Hash<Sha2_256, ByteArray>,
   proof: Proof,
   serialise_fn: fn(a) -> ByteArray,
 ) -> Bool {
   let item_hash = sha2_256(serialise_fn(item))
-  member_from_hash(item_hash, root_hash, proof, serialise_fn)
+  member_from_hash(item_hash, element_hash, proof, serialise_fn)
 }
 
 test member_1() {
@@ -577,10 +577,10 @@ test member_1() {
   let mt = from_list(items, serialise_fn)
 
   let item = dog
-  let rh = root_hash(mt)
+  let rh = element_hash(mt)
 
   expect Some(proof) = get_proof(mt, item, serialise_fn)
-  member(item: item, root_hash: rh, proof: proof, serialise_fn: serialise_fn)
+  member(item: item, element_hash: rh, proof: proof, serialise_fn: serialise_fn)
 }
 
 test member_2() {
@@ -594,10 +594,10 @@ test member_2() {
   let mt = from_list(items, serialise_fn)
 
   let item = cat
-  let rh = root_hash(mt)
+  let rh = element_hash(mt)
 
   expect Some(proof) = get_proof(mt, item, serialise_fn)
-  member(item: item, root_hash: rh, proof: proof, serialise_fn: serialise_fn)
+  member(item: item, element_hash: rh, proof: proof, serialise_fn: serialise_fn)
 }
 
 test member_3() {
@@ -609,10 +609,10 @@ test member_3() {
   let mt = from_list(items, serialise_fn)
 
   let item = cat
-  let rh = root_hash(mt)
+  let rh = element_hash(mt)
 
   expect Some(proof) = get_proof(mt, item, serialise_fn)
-  member(item: item, root_hash: rh, proof: proof, serialise_fn: serialise_fn)
+  member(item: item, element_hash: rh, proof: proof, serialise_fn: serialise_fn)
 }
 
 test member_4() {
@@ -625,10 +625,10 @@ test member_4() {
   let mt = from_list(items, serialise_fn)
 
   let item = mouse
-  let rh = root_hash(mt)
+  let rh = element_hash(mt)
 
   expect Some(proof) = get_proof(mt, item, serialise_fn)
-  member(item: item, root_hash: rh, proof: proof, serialise_fn: serialise_fn)
+  member(item: item, element_hash: rh, proof: proof, serialise_fn: serialise_fn)
 }
 
 test member_5() {
@@ -644,10 +644,10 @@ test member_5() {
   let mt = from_list(items, serialise_fn)
 
   let item = pig
-  let rh = root_hash(mt)
+  let rh = element_hash(mt)
 
   expect Some(proof) = get_proof(mt, item, serialise_fn)
-  member(item: item, root_hash: rh, proof: proof, serialise_fn: serialise_fn)
+  member(item: item, element_hash: rh, proof: proof, serialise_fn: serialise_fn)
 }
 
 test member_6() {
@@ -674,7 +674,7 @@ pub fn member_from_tree(
   serialise_fn: fn(a) -> ByteArray,
 ) -> Bool {
   let proof: Option<Proof> = get_proof(tree, item, serialise_fn)
-  let rh = root_hash(tree)
+  let rh = element_hash(tree)
 
   when proof is {
     Some(p) -> member(item, rh, p, serialise_fn)

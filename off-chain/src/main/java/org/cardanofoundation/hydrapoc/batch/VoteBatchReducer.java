@@ -130,15 +130,14 @@ public class VoteBatchReducer {
         }
 
         txBuilder = txBuilder.andThen((context, txn) -> {
-                    TxEvaluator txEvaluator = new TxEvaluator();
-
+                    val txEvaluator = new TxEvaluator();
                     val costMdls = new CostMdls();
                     costMdls.add(CostModelUtil.getCostModelFromProtocolParams(protocolParamsSupplier.getProtocolParams(), Language.PLUTUS_V2).orElseThrow());
 
                     val evalReedemers = txEvaluator.evaluateTx(txn, context.getUtxos(), costMdls);
 
-                    List<Redeemer> redeemers = txn.getWitnessSet().getRedeemers();
-                    for (Redeemer redeemer : redeemers) { // Update costs
+                    val redeemers = txn.getWitnessSet().getRedeemers();
+                    for (val redeemer : redeemers) { // Update costs
                         evalReedemers.stream().filter(evalReedemer -> evalReedemer.getIndex().equals(redeemer.getIndex()))
                                 .findFirst()
                                 .ifPresent(evalRedeemer -> redeemer.setExUnits(evalRedeemer.getExUnits()));

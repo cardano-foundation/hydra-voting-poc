@@ -8,7 +8,7 @@ use aiken/transaction.{
 use aiken/transaction/credential.{ScriptCredential}
 use voting/address.{PubKeyHash}
 use voting/challenge_proposal.{Challenge, ChallengeProposal, Proposal}
-use voting/mt.{MerkleTree}
+use voting/mt.{MerkleElement}
 use voting/validators
 
 // TODO
@@ -54,8 +54,11 @@ type ResultsBatchDatum {
 
 type Redeemer {
   // Approve { merkle_tree: MerkleTree<Vote> }
-  CreateVoteBatch { merkle_tree: MerkleTree<Vote> }
-  ReduceVoteBatch { merkle_tree: MerkleTree<ResultsBatchDatum>, iteration: Int }
+  CreateVoteBatch { merkle_tree: MerkleElement<Vote> }
+  ReduceVoteBatch {
+    merkle_tree: MerkleElement<ResultsBatchDatum>,
+    iteration: Int,
+  }
 }
 
 // Note:
@@ -70,7 +73,7 @@ validator voting {
 
     when redeemer is {
       CreateVoteBatch { merkle_tree } -> {
-        let merkle_root_hash = mt.root_hash(merkle_tree)
+        let merkle_root_hash = mt.element_hash(merkle_tree)
         // we sum all votes and output in the ResultsBatchDatum
         // and somehow verify id of the batch and total votes in the batch
         // alternatively use normal inputs
@@ -90,7 +93,7 @@ validator voting {
         ) && result_sent_to_own_address_match(inputs, outputs, output_reference)
       }
       ReduceVoteBatch { merkle_tree, iteration } -> {
-        let merkle_tree_root_hash = mt.root_hash(merkle_tree)
+        let merkle_tree_root_hash = mt.element_hash(merkle_tree)
         // collect results from all inputs (fail if there are still votes in smart contract)
         // take existing results and compress them, into one
         // check if resulting output datum contains votes counted up properly and that they send result back to the same address
@@ -150,7 +153,7 @@ fn results_must_match(
   )
 }
 
-fn validate_votes(votes: List<Vote>, merkle_tree: MerkleTree<Vote>) -> Bool {
+fn validate_votes(votes: List<Vote>, merkle_tree: MerkleElement<Vote>) -> Bool {
   let ser_fn = fn(v: Vote) { builtin.serialise_data(v) }
 
   let all_votes_present_match =
@@ -163,7 +166,7 @@ fn validate_votes(votes: List<Vote>, merkle_tree: MerkleTree<Vote>) -> Bool {
 
 fn validate_results(
   results: List<ResultsBatchDatum>,
-  merkle_tree: MerkleTree<ResultsBatchDatum>,
+  merkle_tree: MerkleElement<ResultsBatchDatum>,
 ) -> Bool {
   let ser_fn = fn(r: ResultsBatchDatum) { builtin.serialise_data(r) }
 
