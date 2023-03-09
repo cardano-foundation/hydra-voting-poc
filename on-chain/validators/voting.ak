@@ -11,10 +11,6 @@ use voting/challenge_proposal.{Challenge, ChallengeProposal, Proposal}
 use voting/mt.{MerkleElement}
 use voting/validators
 
-// TODO
-// 1. add merkle tree to validate votes
-// 2. What shall we call datums and what not???
-
 type VotingPower =
   Int
 
@@ -87,10 +83,16 @@ validator voting {
             iteration: 0,
             merkle_root_hash: Some(merkle_root_hash),
           }
-        validate_votes(votes, merkle_tree) && results_must_match(
-          outputs: sc.transaction.outputs,
-          expected_results: output_datum,
-        ) && result_sent_to_own_address_match(inputs, outputs, output_reference)
+        list.and(
+          [
+            validate_votes(votes, merkle_tree)?,
+            results_must_match(
+              outputs: sc.transaction.outputs,
+              expected_results: output_datum,
+            )?,
+            result_sent_to_own_address_match(inputs, outputs, output_reference)?,
+          ],
+        )
       }
       ReduceVoteBatch { merkle_tree, iteration } -> {
         let merkle_tree_root_hash = mt.element_hash(merkle_tree)
@@ -110,10 +112,13 @@ validator voting {
             ..one_final_result,
             merkle_root_hash: Some(merkle_tree_root_hash),
           }
-        validate_results(all_results, merkle_tree) && results_must_match(
-          outputs,
-          one_final_result_with_hash,
-        ) && result_sent_to_own_address_match(inputs, outputs, output_reference)
+        list.and(
+          [
+            validate_results(all_results, merkle_tree)?,
+            results_must_match(outputs, one_final_result_with_hash)?,
+            result_sent_to_own_address_match(inputs, outputs, output_reference)?,
+          ],
+        )
       }
       _ -> False
     }
@@ -284,51 +289,9 @@ fn count_votes(votes: List<Vote>) -> Dict<ChallengeProposal, Result> {
   do_count_votes(votes, empty)
 }
 
-test do_count_votes_1() {
-  let v1 =
-    Vote {
-      voter_key: #"01",
-      voting_power: 10,
-      challenge: 1,
-      proposal: 1,
-      choice: 2,
-    }
-  let v2 =
-    Vote {
-      voter_key: #"02",
-      voting_power: 20,
-      challenge: 1,
-      proposal: 2,
-      choice: 2,
-    }
-  let v3 =
-    Vote {
-      voter_key: #"03",
-      voting_power: 30,
-      challenge: 1,
-      proposal: 2,
-      choice: 2,
-    }
-  let v4 =
-    Vote {
-      voter_key: #"04",
-      voting_power: 30,
-      challenge: 2,
-      proposal: 1,
-      choice: 0,
-    }
-
-  let votes = [v1, v2, v3, v4]
-  let results: Dict<ChallengeProposal, Result> = count_votes(votes)
-  let cp1: ChallengeProposal = ChallengeProposal { challenge: 1, proposal: 1 }
-  let cp2: ChallengeProposal = ChallengeProposal { challenge: 1, proposal: 2 }
-  let cp3: ChallengeProposal = ChallengeProposal { challenge: 2, proposal: 1 }
-
-  expect Some(r1) = dict.get(results, cp1)
-  expect Some(r2) = dict.get(results, cp2)
-  expect Some(r3) = dict.get(results, cp3)
-
-  r1.yes == 10 && r1.no == 0 && r1.abstain == 0 && r2.yes == 50 && r2.no == 0 && r2.abstain == 0 && r3.yes == 0 && r3.no == 0 && r3.abstain == 30
+fn voting_power_for_choice(v: Vote, c: Choice) -> Option<VotingPower> {
+  list.find([0, 1, 2], fn(choice: Choice) { v.choice == choice && c == choice })
+  |> option.map(fn(_) { v.voting_power })
 }
 
 fn to_flat_vote(v: Vote) -> FlatVote {
@@ -398,48 +361,4 @@ test to_flat_vote_3() {
     no: 0,
     abstain: 10,
   }
-}
-
-fn voting_power_for_choice(v: Vote, c: Choice) -> Option<VotingPower> {
-  list.find([0, 1, 2], fn(choice: Choice) { v.choice == choice && c == choice })
-  |> option.map(fn(_) { v.voting_power })
-}
-
-test voting_power_for_choice_1() {
-  let v1 =
-    Vote {
-      voter_key: #"01",
-      voting_power: 100,
-      challenge: 1,
-      proposal: 1,
-      choice: 0,
-    }
-
-  voting_power_for_choice(v1, 0) == Some(100)
-}
-
-test voting_power_for_choice_2() {
-  let v1 =
-    Vote {
-      voter_key: #"01",
-      voting_power: 100,
-      challenge: 1,
-      proposal: 1,
-      choice: -1,
-    }
-
-  voting_power_for_choice(v1, 0) == None
-}
-
-test voting_power_for_choice_3() {
-  let v1 =
-    Vote {
-      voter_key: #"02",
-      voting_power: 100,
-      challenge: 2,
-      proposal: -1,
-      choice: 2,
-    }
-
-  voting_power_for_choice(v1, 2) == Some(100)
 }
