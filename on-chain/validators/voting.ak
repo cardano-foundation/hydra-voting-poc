@@ -290,7 +290,10 @@ fn count_votes(votes: List<Vote>) -> Dict<ChallengeProposal, Result> {
 }
 
 fn voting_power_for_choice(v: Vote, c: Choice) -> Option<VotingPower> {
-  list.find([0, 1, 2], fn(choice: Choice) { v.choice == choice && c == choice })
+  list.find(
+    [0, 1, 2],
+    fn(choice: Choice) { list.and([(v.choice == choice)?, c == choice]) },
+  )
   |> option.map(fn(_) { v.voting_power })
 }
 

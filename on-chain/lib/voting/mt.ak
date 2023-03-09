@@ -272,8 +272,9 @@ test get_proof_3() {
   expect Some(p1) = list.at(proof, 0)
 
   let h1: ByteArray = get_proof_item_value(p1)
+  let hash_match = h1 == node_hash
 
-  size_match && h1 == node_hash
+  list.and([size_match?, hash_match?])
 }
 
 test get_proof_4() {
