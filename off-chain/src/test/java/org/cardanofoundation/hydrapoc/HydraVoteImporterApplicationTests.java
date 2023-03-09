@@ -93,12 +93,15 @@ class HydraVoteImporterApplicationTests {
     // Run this test multiple times to reduce batches to 1 batch
     @Test
     public void reduceBatch() throws Exception {
-        voteBatchReducer.postReduceBatchTransaction(5, 0);
-        voteBatchReducer.postReduceBatchTransaction(5, 0);
-        voteBatchReducer.postReduceBatchTransaction(5, 0);
-        voteBatchReducer.postReduceBatchTransaction(5, 0);
+        Thread.sleep(5000);
 
-//        // final reduction
+        for (int i=0; i<4; i++) {
+            Thread.sleep(500);
+            voteBatchReducer.postReduceBatchTransaction(5, 0);
+        }
+
+        Thread.sleep(500);
+        // final reduction
         voteBatchReducer.postReduceBatchTransaction(4, 1);
     }
 
