@@ -81,6 +81,7 @@ class HydraVoteImporterApplicationTests {
         var partitions = Lists.partition(allVotes, batchSize);
 
         for (var votesPart : partitions) {
+            Thread.sleep(500);
             if (votesPart.size() == batchSize) {
                 voteBatcher.createAndPostBatchTransaction(batchSize);
             }
