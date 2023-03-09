@@ -166,7 +166,7 @@ fn validate_votes(votes: List<Vote>, merkle_tree: MerkleElement<Vote>) -> Bool {
 
   let leaf_size_match = mt.size(merkle_tree) == list.length(votes)
 
-  all_votes_present_match && leaf_size_match
+  list.and([all_votes_present_match?, leaf_size_match?])
 }
 
 fn validate_results(
@@ -183,7 +183,7 @@ fn validate_results(
 
   let leaf_size_match = mt.size(merkle_tree) == list.length(results)
 
-  all_results_present_match && leaf_size_match
+  list.and([all_results_present_match?, leaf_size_match])
 }
 
 fn get_votes_from_inputs(inputs: List<Input>) -> List<Vote> {
