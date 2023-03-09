@@ -17,6 +17,7 @@ import org.cardanofoundation.hydrapoc.batch.VoteUtxoFinder;
 import org.cardanofoundation.hydrapoc.batch.data.output.ResultBatchDatum;
 import org.cardanofoundation.hydrapoc.commands.Commands;
 import org.cardanofoundation.hydrapoc.generator.RandomVoteGenerator;
+import org.cardanofoundation.hydrapoc.hydra.util.FuelTransaction;
 import org.cardanofoundation.hydrapoc.importvote.VoteDatum;
 import org.cardanofoundation.hydrapoc.importvote.VoteImporter;
 import org.cardanofoundation.hydrapoc.model.Vote;
@@ -56,6 +57,7 @@ class HydraVoteImporterApplicationTests {
     //2. Import 20 votes from votes.json to script address
     @Test
     public void importVotesFromFile() throws Exception {
+        Thread.sleep(5000); //so that all previous messages are consumed from hydra
         var allVotes = randomVoteGenerator.getAllVotes("votes.json");
         var batchSize = 5;
 
@@ -73,6 +75,7 @@ class HydraVoteImporterApplicationTests {
     //Run this test multiple times to create multiple batches
     @Test
     public void createAndPostBatch() throws Exception {
+        Thread.sleep(5000);
         var allVotes = randomVoteGenerator.getAllVotes("votes.json");
         var batchSize = 5;
         var partitions = Lists.partition(allVotes, batchSize);
@@ -165,4 +168,14 @@ class HydraVoteImporterApplicationTests {
         assertThat(address).isEqualTo("addr_test1wqc0qxcdrrk63df4zurraavkq6pglpg0ur73zdn6398xuwsrt3mje");
     }
 
+    @Autowired
+    FuelTransaction fuelTransaction;
+
+    @Test
+    public void fuel() throws Exception {
+        List<String> addresses = List.of("addr_test1vr2jvlvw62kv82x8gn0pewn6n5r82m6zxxn6c7vp04t9avs3wgpxv",
+                "addr_test1vz4jpljkq88278xat56pcy240ey9ng9wza8qtdavg6f7vqs0z8903",
+                "addr_test1vzh03tyuujtl4tfq4maduaxk0pvt893xy4g4l6cn4k7mtxs7rmsjz");
+        fuelTransaction.fuel(addresses);
+    }
 }

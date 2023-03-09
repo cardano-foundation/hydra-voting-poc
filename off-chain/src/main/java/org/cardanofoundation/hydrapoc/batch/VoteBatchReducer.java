@@ -119,10 +119,10 @@ public class VoteBatchReducer {
         }
 
         txBuilder = txBuilder.andThen((context, txn) -> {
-                    TxEvaluator txEvaluator = new TxEvaluator(context.getUtxos());
+                    TxEvaluator txEvaluator = new TxEvaluator();
                     CostMdls costMdls = new CostMdls();
                     costMdls.add(CostModelUtil.getCostModelFromProtocolParams(protocolParamsSupplier.getProtocolParams(), Language.PLUTUS_V2).orElseThrow());
-                    List<Redeemer> evalReedemers = txEvaluator.evaluateTx(txn, costMdls);
+                    List<Redeemer> evalReedemers = txEvaluator.evaluateTx(txn, context.getUtxos(), costMdls);
 
                     List<Redeemer> redeemers = txn.getWitnessSet().getRedeemers();
                     for (Redeemer redeemer : redeemers) { // Update costs
