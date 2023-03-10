@@ -1,4 +1,4 @@
-package org.cardanofoundation.hydrapoc.importvote;
+package org.cardanofoundation.hydrapoc.hydra.util;
 
 import com.bloxbean.cardano.client.api.ProtocolParamsSupplier;
 import com.bloxbean.cardano.client.api.TransactionProcessor;
@@ -10,34 +10,25 @@ import com.bloxbean.cardano.client.function.TxBuilderContext;
 import com.bloxbean.cardano.client.function.TxOutputBuilder;
 import com.bloxbean.cardano.client.function.helper.BalanceTxBuilders;
 import com.bloxbean.cardano.client.function.helper.InputBuilders;
-import com.bloxbean.cardano.client.function.helper.MinAdaCheckers;
-import com.bloxbean.cardano.client.plutus.api.PlutusObjectConverter;
-import com.bloxbean.cardano.client.plutus.impl.DefaultPlutusObjectConverter;
-import com.bloxbean.cardano.client.transaction.spec.PlutusData;
 import com.bloxbean.cardano.client.transaction.spec.Transaction;
 import com.bloxbean.cardano.client.transaction.spec.TransactionOutput;
 import com.bloxbean.cardano.client.transaction.spec.Value;
+import com.bloxbean.cardano.client.util.HexUtil;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.cardanofoundation.hydrapoc.commands.PlutusScriptUtil;
-import org.cardanofoundation.hydrapoc.common.OperatorAccountProvider;
-import org.cardanofoundation.hydrapoc.model.Vote;
 import org.cardanofoundation.hydrapoc.commands.TransactionUtil;
-import org.springframework.retry.annotation.Backoff;
-import org.springframework.retry.annotation.Retryable;
+import org.cardanofoundation.hydrapoc.common.OperatorAccountProvider;
 import org.springframework.stereotype.Component;
 
-import java.math.BigInteger;
-import java.util.Collection;
 import java.util.List;
-import java.util.stream.Collectors;
 
 import static com.bloxbean.cardano.client.common.ADAConversionUtil.adaToLovelace;
 
 @Component
 @RequiredArgsConstructor
 @Slf4j
-public class VoteImporter {
+public class FuelTransaction {
     private final UtxoSupplier utxoSupplier;
     private final ProtocolParamsSupplier protocolParamsSupplier;
     private final TransactionProcessor transactionProcessor;
@@ -45,51 +36,31 @@ public class VoteImporter {
     private final TransactionUtil transactionUtil;
     private final PlutusScriptUtil plutusScriptUtil;
 
-    private PlutusObjectConverter plutusObjectConverter = new DefaultPlutusObjectConverter();
+    private final String FUEL_DATA_HASH = "a654fb60d21c1fed48db2c320aa6df9737ec0204c0ba53b9b94a09fb40e757f3";
 
-    @Retryable(include = {RuntimeException.class},
-            maxAttempts = 3,
-            backoff = @Backoff(delay = 100))
-    public String importVotes(Collection<Vote> votes) throws Exception {
-        return createTransactionWithDatum(votes);
+    public String fuel(List<String> nodeOperators) throws Exception {
+        return createTransactionWithDatum(nodeOperators);
     }
 
-    private String createTransactionWithDatum(Collection<Vote> votes) throws Exception {
-        List<VoteDatum> voteDatumList = votes.stream()
-                .map(vote -> VoteDatum.builder()
-                        .voterKey(vote.getVoterKey())
-                        .votingPower(vote.getVotingPower())
-                        .challenge(vote.getChallenge())
-                        .proposal(vote.getProposal())
-                        .choice(vote.getChoice().toValue())
-                        .build()
-                ).collect(Collectors.toList());
-
+    private String createTransactionWithDatum(List<String> receivers) throws Exception {
         String sender = operatorAccountProvider.getOperatorAddress();
         log.info("Sender Address: " + sender);
-        String voteBatchContractAddress = plutusScriptUtil.getVoteBatcherContractAddress();
-        log.info("Contract Address: " + voteBatchContractAddress);
 
         //Create a empty output builder
         TxOutputBuilder txOutputBuilder = (context, outputs) -> {
         };
-        //Iterate through voteDatumLists and create TransactionOutputs
-        for (VoteDatum voteDatum : voteDatumList) {
-            PlutusData datum = plutusObjectConverter.toPlutusData(voteDatum);
+
+        for (String receiver : receivers) {
             txOutputBuilder = txOutputBuilder.and((context, outputs) -> {
                 TransactionOutput transactionOutput = TransactionOutput.builder()
-                        .address(voteBatchContractAddress)
+                        .address(receiver)
                         .value(Value
                                 .builder()
-                                .coin(adaToLovelace(1))
+                                .coin(adaToLovelace(100))
                                 .build()
                         )
-                        .inlineDatum(datum)
+                        .datumHash(HexUtil.decodeHexString(FUEL_DATA_HASH))
                         .build();
-
-                BigInteger additionalLoveLace = MinAdaCheckers.minAdaChecker().apply(context, transactionOutput);
-                transactionOutput.setValue(transactionOutput.getValue().plus(new Value(additionalLoveLace, null)));
-
                 outputs.add(transactionOutput);
             });
         }
@@ -113,5 +84,4 @@ public class VoteImporter {
         transactionUtil.waitForTransaction(result);
         return result.getValue();
     }
-
 }

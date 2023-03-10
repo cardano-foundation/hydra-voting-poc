@@ -27,8 +27,11 @@ dependencies {
     implementation 'org.springframework:spring-aspects'
     implementation 'com.bloxbean.cardano:cardano-client-lib:0.4.3'
     implementation 'com.bloxbean.cardano:cardano-client-backend-blockfrost:0.4.3'
-    implementation 'com.bloxbean.cardano:aiken-java-binding:0.0.1'
+    implementation 'com.bloxbean.cardano:aiken-java-binding:0.0.2'
     implementation("com.google.guava:guava:31.1-jre")
+    implementation("io.projectreactor:reactor-core:3.5.3")
+
+    implementation("org.cardanofoundation:hydra-java-client:0.0.2-SNAPSHOT")
 
     implementation 'org.projectlombok:lombok:1.18.26'
     annotationProcessor 'org.projectlombok:lombok:1.18.26'

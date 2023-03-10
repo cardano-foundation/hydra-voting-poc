@@ -30,6 +30,8 @@ import org.cardanofoundation.hydrapoc.batch.data.output.ResultBatchDatum;
 import org.cardanofoundation.hydrapoc.commands.PlutusScriptUtil;
 import org.cardanofoundation.hydrapoc.commands.TransactionUtil;
 import org.cardanofoundation.hydrapoc.common.OperatorAccountProvider;
+import org.springframework.retry.annotation.Backoff;
+import org.springframework.retry.annotation.Retryable;
 import org.springframework.stereotype.Component;
 
 import java.math.BigInteger;
@@ -59,6 +61,9 @@ public class VoteBatchReducer {
     private PlutusObjectConverter plutusObjectConverter = new DefaultPlutusObjectConverter();
 
     //TODO -- check collateral return when new utxo added during balanceTx
+    @Retryable(include = {RuntimeException.class},
+            maxAttempts = 3,
+            backoff = @Backoff(delay = 100))
     public String postReduceBatchTransaction(int batchSize, long iteration) throws Exception {
         PlutusV2Script voteBatcherScript = plutusScriptUtil.getVoteBatcherContract();
         String voteBatcherScriptAddress = plutusScriptUtil.getVoteBatcherContractAddress();
@@ -119,10 +124,10 @@ public class VoteBatchReducer {
         }
 
         txBuilder = txBuilder.andThen((context, txn) -> {
-                    TxEvaluator txEvaluator = new TxEvaluator(context.getUtxos());
+                    TxEvaluator txEvaluator = new TxEvaluator();
                     CostMdls costMdls = new CostMdls();
                     costMdls.add(CostModelUtil.getCostModelFromProtocolParams(protocolParamsSupplier.getProtocolParams(), Language.PLUTUS_V2).orElseThrow());
-                    List<Redeemer> evalReedemers = txEvaluator.evaluateTx(txn, costMdls);
+                    List<Redeemer> evalReedemers = txEvaluator.evaluateTx(txn, context.getUtxos(), costMdls);
 
                     List<Redeemer> redeemers = txn.getWitnessSet().getRedeemers();
                     for (Redeemer redeemer : redeemers) { // Update costs
