@@ -33,6 +33,8 @@ import org.cardanofoundation.hydrapoc.commands.PlutusScriptUtil;
 import org.cardanofoundation.hydrapoc.commands.TransactionUtil;
 import org.cardanofoundation.hydrapoc.common.OperatorAccountProvider;
 import org.cardanofoundation.hydrapoc.importvote.VoteDatum;
+import org.springframework.retry.annotation.Backoff;
+import org.springframework.retry.annotation.Retryable;
 import org.springframework.stereotype.Component;
 
 import java.math.BigInteger;
@@ -61,6 +63,9 @@ public class VoteBatcher {
     private PlutusObjectConverter plutusObjectConverter = new DefaultPlutusObjectConverter();
 
     //TODO -- check collateral return when new utxo added during balanceTx
+    @Retryable(include = {RuntimeException.class},
+            maxAttempts = 3,
+            backoff = @Backoff(delay = 100))
     public String createAndPostBatchTransaction(int batchSize) throws Exception {
         PlutusV2Script voteBatcherScript = plutusScriptUtil.getVoteBatcherContract();
         String voteBatcherScriptAddress = plutusScriptUtil.getVoteBatcherContractAddress();

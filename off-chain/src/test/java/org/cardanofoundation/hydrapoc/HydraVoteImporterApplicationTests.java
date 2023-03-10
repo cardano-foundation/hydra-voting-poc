@@ -24,6 +24,8 @@ import org.cardanofoundation.hydrapoc.model.Vote;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.retry.annotation.Backoff;
+import org.springframework.retry.annotation.Retryable;
 
 import java.util.List;
 import java.util.Set;
@@ -81,7 +83,6 @@ class HydraVoteImporterApplicationTests {
         var partitions = Lists.partition(allVotes, batchSize);
 
         for (var votesPart : partitions) {
-            Thread.sleep(500);
             if (votesPart.size() == batchSize) {
                 voteBatcher.createAndPostBatchTransaction(batchSize);
             }
@@ -95,14 +96,15 @@ class HydraVoteImporterApplicationTests {
     public void reduceBatch() throws Exception {
         Thread.sleep(5000);
 
-        for (int i=0; i<4; i++) {
+        for (int i = 0; i < 4; i++) {
             Thread.sleep(500);
-            voteBatchReducer.postReduceBatchTransaction(5, 0);
+            voteBatchReducer.postReduceBatchTransaction(4, 0);
         }
 
         Thread.sleep(500);
+
         // final reduction
-        voteBatchReducer.postReduceBatchTransaction(4, 1);
+        voteBatchReducer.postReduceBatchTransaction(5, 1);
     }
 
     @Test

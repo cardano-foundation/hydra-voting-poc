@@ -29,6 +29,7 @@ import java.util.concurrent.TimeUnit;
 @Component
 @Slf4j
 public class HydraClient implements HydraStateEventListener, HydraQueryEventListener {
+
     private HydraWSClient hydraWSClient;
     @Value("${hydra.ws.url}")
     private String hydraWsUrl;
@@ -36,7 +37,6 @@ public class HydraClient implements HydraStateEventListener, HydraQueryEventList
     private Map<Object, List<MonoSink>> monoSinkMap = new ConcurrentHashMap<>();
 
     public HydraClient() {
-
     }
 
     public void connect() throws URISyntaxException, InterruptedException {
