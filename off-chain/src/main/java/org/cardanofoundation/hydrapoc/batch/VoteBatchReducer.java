@@ -29,6 +29,8 @@ import org.cardanofoundation.hydrapoc.commands.PlutusScriptUtil;
 import org.cardanofoundation.hydrapoc.commands.TransactionUtil;
 import org.cardanofoundation.hydrapoc.common.OperatorAccountProvider;
 import org.cardanofoundation.merkle.core.MerkleTree;
+import org.springframework.retry.annotation.Backoff;
+import org.springframework.retry.annotation.Retryable;
 import org.springframework.stereotype.Component;
 
 import java.math.BigInteger;
@@ -57,11 +59,13 @@ public class VoteBatchReducer {
     private PlutusObjectConverter plutusObjectConverter = new DefaultPlutusObjectConverter();
 
     //TODO -- check collateral return when new utxo added during balanceTx
+    @Retryable(include = {RuntimeException.class},
+            maxAttempts = 3,
+            backoff = @Backoff(delay = 100))
     public Optional<String> postReduceBatchTransaction(int batchSize, long iteration) throws Exception {
         val voteBatcherScript = plutusScriptUtil.getVoteBatcherContract();
         val voteBatcherScriptAddress = plutusScriptUtil.getVoteBatcherContractAddress();
         val sender = operatorAccountProvider.getOperatorAddress();
-
         log.info("Sender Address: " + sender);
         log.info("Script Address: " + voteBatcherScriptAddress);
 

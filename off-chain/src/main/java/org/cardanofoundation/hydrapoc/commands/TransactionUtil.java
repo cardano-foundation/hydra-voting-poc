@@ -5,14 +5,23 @@ import com.bloxbean.cardano.client.backend.api.TransactionService;
 import com.bloxbean.cardano.client.backend.model.TransactionContent;
 import com.bloxbean.cardano.client.util.JsonUtil;
 import lombok.RequiredArgsConstructor;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
 import org.springframework.stereotype.Component;
 
 @Component
 @RequiredArgsConstructor
+@ConditionalOnBean(TransactionService.class)
 public class TransactionUtil {
-    private final TransactionService transactionService;
+    private TransactionService transactionService;
+
+    public TransactionUtil(TransactionService transactionService) {
+        this.transactionService = transactionService;
+    }
 
     public void waitForTransaction(Result<String> result) {
+        if (transactionService == null)
+            return;
+
         try {
             if (result.isSuccessful()) { //Wait for transaction to be mined
                 int count = 0;
