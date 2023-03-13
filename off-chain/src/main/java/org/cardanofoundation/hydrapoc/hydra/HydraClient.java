@@ -31,6 +31,7 @@ import java.util.concurrent.TimeUnit;
 public class HydraClient implements HydraStateEventListener, HydraQueryEventListener {
 
     private HydraWSClient hydraWSClient;
+
     @Value("${hydra.ws.url}")
     private String hydraWsUrl;
 

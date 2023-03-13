@@ -70,8 +70,8 @@ public class VoteImporter {
         log.info("Contract Address: " + voteBatchContractAddress);
 
         //Create a empty output builder
-        TxOutputBuilder txOutputBuilder = (context, outputs) -> {
-        };
+        TxOutputBuilder txOutputBuilder = (context, outputs) -> {};
+
         //Iterate through voteDatumLists and create TransactionOutputs
         for (VoteDatum voteDatum : voteDatumList) {
             PlutusData datum = plutusObjectConverter.toPlutusData(voteDatum);
