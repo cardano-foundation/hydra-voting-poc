@@ -24,8 +24,9 @@ import java.util.Optional;
 @Builder
 @Slf4j
 public class VoteDatum {
+
     @PlutusField
-    String voterKey;
+    byte[] voterKey;
     @PlutusField
     long votingPower;
     @PlutusField
@@ -46,7 +47,7 @@ public class VoteDatum {
                 return Optional.empty();
 
             List<PlutusData> plutusDataList = constr.getData().getPlutusDataList();
-            String voterKey = HexUtil.encodeHexString(((BytesPlutusData) plutusDataList.get(0)).getValue());
+            byte[] voterKey = ((BytesPlutusData) plutusDataList.get(0)).getValue();
             long votingPower = ((BigIntPlutusData) plutusDataList.get(1)).getValue().longValue();
             long challenge = ((BigIntPlutusData) plutusDataList.get(2)).getValue().longValue();
             long proposal = ((BigIntPlutusData) plutusDataList.get(3)).getValue().longValue();

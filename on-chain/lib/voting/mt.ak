@@ -719,10 +719,35 @@ test member_from_tree_2() {
   member_from_tree(tree: mt, item: item, serialise_fn: serialise_fn) == False
 }
 
+test member_from_tree_32() {
+  let dog = @"dog"
+
+  let serialise_fn = create_string_item_serialise_fn()
+
+  let items = [dog]
+  let mt = from_list(items, serialise_fn)
+
+  member_from_tree(tree: mt, item: dog, serialise_fn: serialise_fn)
+}
+
 fn get_proof_item_value(proof_item: ProofItem) -> Hash<Sha2_256, ByteArray> {
   when proof_item is {
     Left(hash) -> hash
     Right(hash) -> hash
+  }
+}
+
+pub fn member_from_tree2(
+  tree: MerkleElement<a>,
+  item: a,
+  serialise_fn: fn(a) -> ByteArray,
+) -> Bool {
+  let proof: Option<Proof<a>> = get_proof(tree, item, serialise_fn)
+  let rh = element_hash(tree)
+
+  when proof is {
+    Some(p) -> member(item, rh, p, serialise_fn)
+    None -> False
   }
 }
 

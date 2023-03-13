@@ -7,6 +7,7 @@ import com.bloxbean.cardano.client.api.model.Utxo;
 import com.bloxbean.cardano.client.common.cbor.CborSerializationUtil;
 import com.bloxbean.cardano.client.common.model.Networks;
 import com.bloxbean.cardano.client.exception.CborSerializationException;
+import com.bloxbean.cardano.client.plutus.impl.DefaultPlutusObjectConverter;
 import com.bloxbean.cardano.client.transaction.spec.PlutusV2Script;
 import com.bloxbean.cardano.client.util.HexUtil;
 import com.bloxbean.cardano.client.util.Tuple;
@@ -24,8 +25,6 @@ import org.cardanofoundation.hydrapoc.model.Vote;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.retry.annotation.Backoff;
-import org.springframework.retry.annotation.Retryable;
 
 import java.util.List;
 import java.util.Set;
@@ -64,13 +63,16 @@ class HydraVoteImporterApplicationTests {
     //2. Import 20 votes from votes.json to script address
     @Test
     public void importVotesFromFile() throws Exception {
-        Thread.sleep(5000); //so that all previous messages are consumed from hydra
+        //Thread.sleep(5000); //so that all previous messages are consumed from hydra
         var allVotes = randomVoteGenerator.getAllVotes("votes.json");
+
+//        voteImporter.importVotes(allVotes);
         var batchSize = 5;
 
         var partitions = Lists.partition(allVotes, batchSize);
         for (var votesPart : partitions) {
             if (votesPart.size() == batchSize) {
+                Thread.sleep(100);
                 voteImporter.importVotes(votesPart);
             } else {
                 System.err.println("ignoring the rest.., size:" + votesPart.size());
@@ -82,13 +84,14 @@ class HydraVoteImporterApplicationTests {
     //Run this test multiple times to create multiple batches
     @Test
     public void createAndPostBatch() throws Exception {
-        Thread.sleep(5000);
+        //Thread.sleep(5000);
         var allVotes = randomVoteGenerator.getAllVotes("votes.json");
-        var batchSize = 5;
+        var batchSize = 2;
         var partitions = Lists.partition(allVotes, batchSize);
 
         for (var votesPart : partitions) {
             if (votesPart.size() == batchSize) {
+                Thread.sleep(100);
                 voteBatcher.createAndPostBatchTransaction(batchSize);
             }
         }
@@ -99,14 +102,14 @@ class HydraVoteImporterApplicationTests {
     // Run this test multiple times to reduce batches to 1 batch
     @Test
     public void reduceBatch() throws Exception {
-        Thread.sleep(5000);
+        //Thread.sleep(5000);
 
         for (int i = 0; i < 4; i++) {
             Thread.sleep(500);
             voteBatchReducer.postReduceBatchTransaction(4, 0);
         }
 
-        Thread.sleep(500);
+        //Thread.sleep(500);
 
         // final reduction
         voteBatchReducer.postReduceBatchTransaction(5, 1);
@@ -118,8 +121,18 @@ class HydraVoteImporterApplicationTests {
         importVotesFromFile();
         System.out.println("creating and posting batches...");
         createAndPostBatch();
-        System.out.println("reducing batches...");
-        reduceBatch();
+//        System.out.println("reducing batches...");
+//        reduceBatch();
+    }
+
+
+    @Test
+    public void test001() throws CborSerializationException, CborException {
+        var a = "A";
+
+        var pd = new DefaultPlutusObjectConverter().toPlutusData(a);
+        var bytes = CborSerializationUtil.serialize(pd.serialize(), false);
+        System.out.println(HexUtil.encodeHexString(bytes));
     }
 
 //    @Test

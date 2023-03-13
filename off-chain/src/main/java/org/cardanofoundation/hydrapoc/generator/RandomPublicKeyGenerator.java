@@ -2,7 +2,6 @@ package org.cardanofoundation.hydrapoc.generator;
 
 import com.bloxbean.cardano.client.crypto.KeyGenUtil;
 import com.bloxbean.cardano.client.exception.CborSerializationException;
-import com.bloxbean.cardano.client.util.HexUtil;
 import org.cardanofoundation.hydrapoc.model.Voter;
 
 import java.util.ArrayList;
@@ -16,7 +15,7 @@ public class RandomPublicKeyGenerator {
         IntStream.range(0, n).forEach(
                 value -> {
                     try {
-                        String pubKey = HexUtil.encodeHexString(KeyGenUtil.generateKey().getVkey().getBytes());
+                        byte[] pubKey = KeyGenUtil.generateKey().getVkey().getBytes();
                         publicKeys.add(new Voter(pubKey, RandomUtil.getRandomNumber(500, 10000000)));
                     } catch (CborSerializationException e) {
                         throw new RuntimeException(e);

@@ -1,5 +1,5 @@
-use aiken/hash.{Blake2b_224, Hash}
+use aiken/hash.{Hash, Sha2_256}
 use aiken/transaction/credential.{VerificationKey}
 
 pub type PubKeyHash =
-  Hash<Blake2b_224, VerificationKey>
+  Hash<Sha2_256, VerificationKey>

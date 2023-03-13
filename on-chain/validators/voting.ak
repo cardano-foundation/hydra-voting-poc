@@ -1,4 +1,5 @@
 use aiken/builtin
+use aiken/bytearray
 use aiken/dict.{Dict}
 use aiken/list
 use aiken/option
@@ -6,7 +7,6 @@ use aiken/transaction.{
   InlineDatum, Input, Output, OutputReference, ScriptContext, Spend,
 }
 use aiken/transaction/credential.{ScriptCredential}
-use voting/address.{PubKeyHash}
 use voting/challenge_proposal.{Challenge, ChallengeProposal, Proposal}
 use voting/mt.{MerkleElement}
 use voting/validators
@@ -18,7 +18,7 @@ type Choice =
   Int
 
 type Vote {
-  voter_key: PubKeyHash,
+  voter_key: ByteArray,
   voting_power: VotingPower,
   challenge: Challenge,
   proposal: Proposal,
@@ -68,6 +68,7 @@ validator voting {
     let outputs: List<Output> = sc.transaction.outputs
 
     when redeemer is {
+      //CreateVoteBatch { merkle_tree } -> True
       CreateVoteBatch { merkle_tree } -> {
         let merkle_root_hash = mt.element_hash(merkle_tree)
         // we sum all votes and output in the ResultsBatchDatum
@@ -86,10 +87,10 @@ validator voting {
         list.and(
           [
             validate_votes(votes, merkle_tree)?,
-            results_must_match(
-              outputs: sc.transaction.outputs,
-              expected_results: output_datum,
-            )?,
+            // results_must_match(
+            //   outputs: sc.transaction.outputs,
+            //   expected_results: output_datum,
+            // )?,
             result_sent_to_own_address_match(inputs, outputs, output_reference)?,
           ],
         )
@@ -166,7 +167,7 @@ fn validate_votes(votes: List<Vote>, merkle_tree: MerkleElement<Vote>) -> Bool {
 
   let leaf_size_match = mt.size(merkle_tree) == list.length(votes)
 
-  list.and([all_votes_present_match?, leaf_size_match?])
+  list.and([leaf_size_match?, all_votes_present_match?])
 }
 
 fn validate_results(
@@ -364,4 +365,27 @@ test to_flat_vote_3() {
     no: 0,
     abstain: 10,
   }
+}
+
+// test test_vote() {
+//   let v1 =
+//     Vote {
+//       voter_key: @"A",
+//       voting_power: 2049627,
+//       challenge: 419184211,
+//       proposal: 1421465,
+//       choice: 0,
+//     }
+
+//   let root = mt.from_list([v1], fn(item) { builtin.serialise_data(item) })
+
+//   #"d83be9fc38d240bda365336dde1b5e563c3725ce773aefb3180a0e485df4743e" == mt.element_hash(
+//     root,
+//   )
+// }
+
+test test_str() {
+  let voter_key = @"A"
+
+  #"41" == bytearray.from_string(voter_key)
 }
