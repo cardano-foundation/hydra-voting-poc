@@ -50,8 +50,8 @@ public class ResultBatchDatum {
                 return Optional.of(ResultBatchDatum.empty(-1)); // TODO iteration -1?
 
             MapPlutusData resultsPDMap = (MapPlutusData) list.get(0);
-            BigIntPlutusData iterationPD = (BigIntPlutusData) list.get(1);
-            BytesPlutusData bytesPD = (BytesPlutusData) list.get(2);
+            BytesPlutusData bytesPD = (BytesPlutusData) list.get(1);
+            BigIntPlutusData iterationPD = (BigIntPlutusData) list.get(2);
 
             Iterator<Map.Entry<PlutusData, PlutusData>> entries = resultsPDMap.getMap().entrySet().iterator();
 
