@@ -1,5 +1,4 @@
 use aiken/builtin
-use aiken/bytearray
 use aiken/dict.{Dict}
 use aiken/list
 use aiken/option
@@ -364,27 +363,4 @@ test to_flat_vote_3() {
     no: 0,
     abstain: 10,
   }
-}
-
-// test test_vote() {
-//   let v1 =
-//     Vote {
-//       voter_key: @"A",
-//       voting_power: 2049627,
-//       challenge: 419184211,
-//       proposal: 1421465,
-//       choice: 0,
-//     }
-
-//   let root = mt.from_list([v1], fn(item) { builtin.serialise_data(item) })
-
-//   #"d83be9fc38d240bda365336dde1b5e563c3725ce773aefb3180a0e485df4743e" == mt.element_hash(
-//     root,
-//   )
-// }
-
-test test_str() {
-  let voter_key = @"A"
-
-  #"41" == bytearray.from_string(voter_key)
 }
