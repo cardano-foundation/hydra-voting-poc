@@ -7,11 +7,9 @@ import com.bloxbean.cardano.client.api.UtxoSupplier;
 import com.bloxbean.cardano.client.api.model.Amount;
 import com.bloxbean.cardano.client.coinselection.impl.DefaultUtxoSelectionStrategyImpl;
 import com.bloxbean.cardano.client.function.Output;
+import com.bloxbean.cardano.client.function.TxBuilder;
 import com.bloxbean.cardano.client.function.TxBuilderContext;
-import com.bloxbean.cardano.client.function.helper.BalanceTxBuilders;
-import com.bloxbean.cardano.client.function.helper.CollateralBuilders;
-import com.bloxbean.cardano.client.function.helper.InputBuilders;
-import com.bloxbean.cardano.client.function.helper.ScriptCallContextProviders;
+import com.bloxbean.cardano.client.function.helper.*;
 import com.bloxbean.cardano.client.function.helper.model.ScriptCallContext;
 import com.bloxbean.cardano.client.plutus.api.PlutusObjectConverter;
 import com.bloxbean.cardano.client.plutus.impl.DefaultPlutusObjectConverter;
@@ -31,6 +29,7 @@ import org.cardanofoundation.hydrapoc.batch.data.output.ResultBatchDatum;
 import org.cardanofoundation.hydrapoc.batch.data.output.ResultDatum;
 import org.cardanofoundation.hydrapoc.commands.PlutusScriptUtil;
 import org.cardanofoundation.hydrapoc.commands.TransactionUtil;
+import org.cardanofoundation.hydrapoc.common.BalanceUtil;
 import org.cardanofoundation.hydrapoc.common.OperatorAccountProvider;
 import org.cardanofoundation.merkle.core.MerkleTree;
 import org.springframework.retry.annotation.Backoff;
@@ -176,7 +175,7 @@ public class VoteBatcher {
             txn.getWitnessSet().getPlutusV2Scripts().clear();
             txn.getWitnessSet().getPlutusV2Scripts().add(plutusScriptUtil.getVoteBatcherContract());
         })
-        .andThen(BalanceTxBuilders.balanceTx(sender, 1));
+        .andThen(BalanceUtil.balanceTx(sender, 1));
 
         val txBuilderContext = TxBuilderContext.init(utxoSupplier, protocolParamsSupplier);
         val transaction = txBuilderContext.buildAndSign(txBuilder, operatorAccountProvider.getTxSigner());
