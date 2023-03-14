@@ -121,6 +121,7 @@ class HydraVoteImporterApplicationTests {
 
         Thread.sleep(100);
         voteBatchReducer.postReduceBatchTransaction(3, 1);
+
         Thread.sleep(100);
         voteBatchReducer.postReduceBatchTransaction(3, 1);
 

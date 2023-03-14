@@ -1,7 +1,6 @@
 use aiken/builtin
 use aiken/bytearray
 use aiken/dict.{Dict}
-use aiken/hash.{Hash, Sha2_256}
 use aiken/list
 use aiken/option
 use aiken/transaction.{
@@ -76,7 +75,7 @@ validator voting {
         let results: Dict<ChallengeProposal, Result> = count_votes(votes)
         // now we need to check if any of the output UTxOs contains results
         // now we have to check if batch_id matches
-        let result =
+        let result_with_hash =
           ResultsBatchDatum {
             results,
             iteration: 0,
@@ -86,14 +85,13 @@ validator voting {
           [
             result_sent_to_own_address_match(inputs, outputs, output_reference)?,
             validate_votes(votes, merkle_tree)?,
-            check_root_hash(merkle_tree_root_hash, result),
+            results_must_match(
+              outputs: sc.transaction.outputs,
+              expected_results: result_with_hash,
+            )?,
           ],
         )
       }
-      // results_must_match(
-      //   outputs: sc.transaction.outputs,
-      //   expected_results: result,
-      // )?,
       ReduceVoteBatch { merkle_tree, iteration } -> {
         let merkle_tree_root_hash = mt.element_hash(merkle_tree)
         // collect results from all inputs (fail if there are still votes in smart contract)
@@ -116,25 +114,16 @@ validator voting {
           [
             validate_results(all_results, merkle_tree)?,
             result_sent_to_own_address_match(inputs, outputs, output_reference)?,
-            check_root_hash(merkle_tree_root_hash, result_with_hash),
+            results_must_match(
+              outputs: sc.transaction.outputs,
+              expected_results: result_with_hash,
+            )?,
           ],
         )
       }
-      // results_must_match(
-      //   outputs: sc.transaction.outputs,
-      //   expected_results: result_with_hash,
-      // )?,
       _ -> False
     }
   }
-}
-
-// temporary before we get to work all this stuff with options
-fn check_root_hash(
-  merkle_root_hash: Hash<Sha2_256, ByteArray>,
-  expected_results: ResultsBatchDatum,
-) {
-  merkle_root_hash == expected_results.merkle_root_hash
 }
 
 fn result_sent_to_own_address_match(
