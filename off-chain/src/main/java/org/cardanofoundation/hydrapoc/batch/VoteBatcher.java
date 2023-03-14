@@ -19,7 +19,6 @@ import com.bloxbean.cardano.client.transaction.spec.ExUnits;
 import com.bloxbean.cardano.client.transaction.spec.Language;
 import com.bloxbean.cardano.client.transaction.spec.RedeemerTag;
 import com.bloxbean.cardano.client.transaction.util.CostModelUtil;
-import com.bloxbean.cardano.client.util.HexUtil;
 import com.bloxbean.cardano.client.util.JsonUtil;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -39,7 +38,6 @@ import org.springframework.stereotype.Component;
 
 import java.math.BigInteger;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.Optional;
 
@@ -110,10 +108,6 @@ public class VoteBatcher {
             }
         }
         val mt = MerkleTree.createFromItems(voteDatums, vote -> sha2_256(plutusObjectConverter.toPlutusData(vote).serializeToBytes()));
-        System.out.println("Root:" + Arrays.toString(mt.elementHash()));
-        System.out.println("RootString:" + HexUtil.encodeHexString(mt.elementHash()));
-        System.out.println("RootJson:" + JsonUtil.getPrettyJson(mt.elementHash()));
-
         resultBatchDatum.setMerkleRootHash(mt.elementHash());
 
         log.info("############# Input Votes ############");
@@ -121,7 +115,7 @@ public class VoteBatcher {
         log.info("########### Result Datum #############");
         log.info(JsonUtil.getPrettyJson(resultBatchDatum));
 
-        // Build and post contract txn\
+        // Build and post contract txn
         val utxoSelectionStrategy = new LargestFirstUtxoSelectionStrategy(utxoSupplier);
         val collateralUtxos = utxoSelectionStrategy.select(sender, new Amount(LOVELACE, adaToLovelace(1000)), Collections.emptySet());
 

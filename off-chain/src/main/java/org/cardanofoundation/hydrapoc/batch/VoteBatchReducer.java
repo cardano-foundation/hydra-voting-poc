@@ -6,6 +6,7 @@ import com.bloxbean.cardano.client.api.TransactionProcessor;
 import com.bloxbean.cardano.client.api.UtxoSupplier;
 import com.bloxbean.cardano.client.api.model.Amount;
 import com.bloxbean.cardano.client.coinselection.impl.DefaultUtxoSelectionStrategyImpl;
+import com.bloxbean.cardano.client.coinselection.impl.LargestFirstUtxoSelectionStrategy;
 import com.bloxbean.cardano.client.function.Output;
 import com.bloxbean.cardano.client.function.TxBuilderContext;
 import com.bloxbean.cardano.client.function.helper.BalanceTxBuilders;
@@ -27,6 +28,7 @@ import lombok.val;
 import org.cardanofoundation.hydrapoc.batch.data.input.ReduceVoteBatchRedeemer;
 import org.cardanofoundation.hydrapoc.commands.PlutusScriptUtil;
 import org.cardanofoundation.hydrapoc.commands.TransactionUtil;
+import org.cardanofoundation.hydrapoc.common.BalanceUtil;
 import org.cardanofoundation.hydrapoc.common.OperatorAccountProvider;
 import org.cardanofoundation.merkle.core.MerkleTree;
 import org.springframework.retry.annotation.Backoff;
@@ -62,14 +64,14 @@ public class VoteBatchReducer {
     @Retryable(include = {RuntimeException.class},
             maxAttempts = 3,
             backoff = @Backoff(delay = 100))
-    public Optional<String> postReduceBatchTransaction(int batchSize, long iteration) throws Exception {
+    public Optional<String> postReduceBatchTransaction(int batchSize, long fromIteration) throws Exception {
         val voteBatcherScript = plutusScriptUtil.getVoteBatcherContract();
         val voteBatcherScriptAddress = plutusScriptUtil.getVoteBatcherContractAddress();
         val sender = operatorAccountProvider.getOperatorAddress();
         log.info("Sender Address: " + sender);
         log.info("Script Address: " + voteBatcherScriptAddress);
 
-        val utxoTuples = voteUtxoFinder.getUtxosWithVoteBatches(batchSize, iteration);
+        val utxoTuples = voteUtxoFinder.getUtxosWithVoteBatches(batchSize, fromIteration);
         if (utxoTuples.size() == 0) {
             log.warn("No utxo found");
             return Optional.empty();
@@ -81,7 +83,7 @@ public class VoteBatchReducer {
         });
 
         // Calculate group result batch datum
-        val reduceVoteBatchDatum = groupResultBatchDatum(results, iteration + 1);
+        val reduceVoteBatchDatum = groupResultBatchDatum(results, fromIteration + 1);
         reduceVoteBatchDatum.setMerkleRootHash(mt.elementHash());
 
         log.info("############# Input Vote Batches ############");
@@ -90,9 +92,8 @@ public class VoteBatchReducer {
         log.info(JsonUtil.getPrettyJson(reduceVoteBatchDatum));
 
         // Build and post contract txn
-        val utxoSelectionStrategy = new DefaultUtxoSelectionStrategyImpl(utxoSupplier);
-        val collateralUtxos =
-                utxoSelectionStrategy.select(sender, new Amount(LOVELACE, adaToLovelace(10)), Collections.emptySet());
+        val utxoSelectionStrategy = new LargestFirstUtxoSelectionStrategy(utxoSupplier);
+        val collateralUtxos = utxoSelectionStrategy.select(sender, new Amount(LOVELACE, adaToLovelace(1000)), Collections.emptySet());
 
         // Build the expected output
         val outputDatum = plutusObjectConverter.toPlutusData(reduceVoteBatchDatum);
@@ -115,13 +116,13 @@ public class VoteBatchReducer {
                         .mem(BigInteger.valueOf(0))
                         .steps(BigInteger.valueOf(0))
                         .build())
-                .redeemer(plutusObjectConverter.toPlutusData(ReduceVoteBatchRedeemer.create(mt, iteration)))
+                .redeemer(plutusObjectConverter.toPlutusData(ReduceVoteBatchRedeemer.create(mt, fromIteration)))
                 .redeemerTag(RedeemerTag.Spend).build())
                 .toList();
 
         var txBuilder = output.outputBuilder()
                 .buildInputs(InputBuilders.createFromUtxos(scriptUtxos, sender))
-                .andThen(CollateralBuilders.collateralOutputs(sender, new ArrayList<>(collateralUtxos))); //CIP-40
+                .andThen(CollateralBuilders.collateralOutputs(sender, new ArrayList<>(collateralUtxos))); // CIP-40
 
         for (val scriptCallContext : scriptCallContexts) {
             txBuilder = txBuilder.andThen(ScriptCallContextProviders.createFromScriptCallContext(scriptCallContext));
@@ -144,7 +145,7 @@ public class VoteBatchReducer {
                     txn.getWitnessSet().getPlutusV2Scripts().clear();
                     txn.getWitnessSet().getPlutusV2Scripts().add(plutusScriptUtil.getVoteBatcherContract());
                 })
-                .andThen(BalanceTxBuilders.balanceTx(sender, 1));
+                .andThen(BalanceUtil.balanceTx(sender, 1));
 
         val txBuilderContext = TxBuilderContext.init(utxoSupplier, protocolParamsSupplier);
         val transaction = txBuilderContext.buildAndSign(txBuilder, operatorAccountProvider.getTxSigner());

@@ -1,13 +1,14 @@
 use aiken/builtin
 use aiken/bytearray
 use aiken/dict.{Dict}
+use aiken/hash.{Hash, Sha2_256}
 use aiken/list
 use aiken/option
 use aiken/transaction.{
   InlineDatum, Input, Output, OutputReference, ScriptContext, Spend,
 }
 use aiken/transaction/credential.{ScriptCredential}
-//use voting/address.{PubKeyHash}
+use voting/address.{PubKeyHash}
 use voting/challenge_proposal.{Challenge, ChallengeProposal, Proposal}
 use voting/mt.{MerkleElement}
 use voting/validators
@@ -19,7 +20,7 @@ type Choice =
   Int
 
 type Vote {
-  voter_key: ByteArray,
+  voter_key: PubKeyHash,
   voting_power: VotingPower,
   challenge: Challenge,
   proposal: Proposal,
@@ -45,7 +46,7 @@ type VotingDatum {
 
 type ResultsBatchDatum {
   results: Dict<ChallengeProposal, Result>,
-  merkle_root_hash: Option<ByteArray>,
+  merkle_root_hash: ByteArray,
   iteration: Int,
 }
 
@@ -69,33 +70,30 @@ validator voting {
     let outputs: List<Output> = sc.transaction.outputs
 
     when redeemer is {
-      //CreateVoteBatch { merkle_tree } -> True
       CreateVoteBatch { merkle_tree } -> {
-        //let merkle_root_hash = mt.element_hash(merkle_tree)
+        let merkle_tree_root_hash = mt.element_hash(merkle_tree)
         let votes: List<Vote> = get_votes_from_inputs(inputs)
-        list.length(votes) == 2
+        let results: Dict<ChallengeProposal, Result> = count_votes(votes)
+        // now we need to check if any of the output UTxOs contains results
+        // now we have to check if batch_id matches
+        let result =
+          ResultsBatchDatum {
+            results,
+            iteration: 0,
+            merkle_root_hash: merkle_tree_root_hash,
+          }
+        list.and(
+          [
+            result_sent_to_own_address_match(inputs, outputs, output_reference)?,
+            validate_votes(votes, merkle_tree)?,
+            check_root_hash(merkle_tree_root_hash, result),
+          ],
+        )
       }
-      // && validate_votes(votes, merkle_tree)
-      // we sum all votes and output in the ResultsBatchDatum
-      // and somehow verify id of the batch and total votes in the batch
-      // alternatively use normal inputs
-      //let results: Dict<ChallengeProposal, Result> = count_votes(votes)
-      // now we need to check if any of the output UTxOs contains results
-      // now we have to check if batch_id matches
-      // let output_datum =
-      //   ResultsBatchDatum {
-      //     results,
-      //     iteration: 0,
-      //     merkle_root_hash: Some(merkle_root_hash),
-      //   }
-      //list.and([validate_votes(votes, merkle_tree)?])
-      //result_sent_to_own_address_match(inputs, outputs, output_reference)?
-      //validate_votes(votes, merkle_tree)?,
       // results_must_match(
       //   outputs: sc.transaction.outputs,
-      //   expected_results: output_datum,
+      //   expected_results: result,
       // )?,
-      //result_sent_to_own_address_match(inputs, outputs, output_reference)
       ReduceVoteBatch { merkle_tree, iteration } -> {
         let merkle_tree_root_hash = mt.element_hash(merkle_tree)
         // collect results from all inputs (fail if there are still votes in smart contract)
@@ -104,27 +102,39 @@ validator voting {
         let new_iteration = iteration + 1
         let all_results: List<ResultsBatchDatum> =
           get_vote_results_from_inputs(inputs, iteration)
-        let one_final_result: ResultsBatchDatum =
+        let result: ResultsBatchDatum =
           count_vote_results(
             vote_results: all_results,
             new_iteration: new_iteration,
           )
-        let one_final_result_with_hash =
+        let result_with_hash =
           ResultsBatchDatum {
-            ..one_final_result,
-            merkle_root_hash: Some(merkle_tree_root_hash),
+            ..result,
+            merkle_root_hash: merkle_tree_root_hash,
           }
         list.and(
           [
             validate_results(all_results, merkle_tree)?,
-            results_must_match(outputs, one_final_result_with_hash)?,
             result_sent_to_own_address_match(inputs, outputs, output_reference)?,
+            check_root_hash(merkle_tree_root_hash, result_with_hash),
           ],
         )
       }
+      // results_must_match(
+      //   outputs: sc.transaction.outputs,
+      //   expected_results: result_with_hash,
+      // )?,
       _ -> False
     }
   }
+}
+
+// temporary before we get to work all this stuff with options
+fn check_root_hash(
+  merkle_root_hash: Hash<Sha2_256, ByteArray>,
+  expected_results: ResultsBatchDatum,
+) {
+  merkle_root_hash == expected_results.merkle_root_hash
 }
 
 fn result_sent_to_own_address_match(
@@ -161,13 +171,13 @@ fn results_must_match(
 }
 
 fn validate_votes(votes: List<Vote>, merkle_tree: MerkleElement<Vote>) -> Bool {
-  //let ser_fn = fn(v: Vote) { builtin.serialise_data(v) }
+  let ser_fn = fn(v: Vote) { builtin.serialise_data(v) }
 
-  // let all_votes_present_match =
-  //   list.all(votes, fn(vote) { mt.member_from_tree(merkle_tree, vote, ser_fn) })
+  let all_votes_present_match =
+    list.all(votes, fn(vote) { mt.member_from_tree(merkle_tree, vote, ser_fn) })
   let leaf_size_match = mt.size(merkle_tree) == list.length(votes)
 
-  list.and([leaf_size_match?])
+  list.and([leaf_size_match?, all_votes_present_match?])
 }
 
 fn validate_results(
@@ -231,7 +241,7 @@ fn count_vote_results(
         compare: challenge_proposal.compare,
       ),
       iteration: new_iteration,
-      merkle_root_hash: None,
+      merkle_root_hash: #"",
     }
   }
 
@@ -240,7 +250,7 @@ fn count_vote_results(
     ResultsBatchDatum {
       results: dict.new(),
       iteration: new_iteration,
-      merkle_root_hash: None,
+      merkle_root_hash: #"",
     }
 
   list.foldl(vote_results, merging_fn, zero)

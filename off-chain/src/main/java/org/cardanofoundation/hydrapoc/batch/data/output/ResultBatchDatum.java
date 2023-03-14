@@ -20,14 +20,13 @@ public class ResultBatchDatum {
     private Map<ChallengeProposalDatum, ResultDatum> results;
 
     @PlutusField
-    @Nullable
-    private byte[] merkleRootHash;
+    private byte[] merkleRootHash = new byte[0];
 
     @PlutusField
     private long iteration;
 
     public static ResultBatchDatum empty(long iteration) {
-        return new ResultBatchDatum(new LinkedHashMap<>(), null, iteration);
+        return new ResultBatchDatum(new LinkedHashMap<>(), new byte[0], iteration);
     }
 
     public void add(ChallengeProposalDatum challengeProposal, ResultDatum result) {
@@ -39,7 +38,11 @@ public class ResultBatchDatum {
     }
 
     public void setMerkleRootHash(@Nullable byte[] merkleRootHash) {
-        this.merkleRootHash = merkleRootHash;
+        if (merkleRootHash == null) {
+            this.merkleRootHash = new byte[0];
+        } else {
+            this.merkleRootHash = merkleRootHash;
+        }
     }
 
     public static Optional<ResultBatchDatum> deserialize(byte[] datum) {
