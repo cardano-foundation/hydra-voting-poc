@@ -1,6 +1,5 @@
 package org.cardanofoundation.hydrapoc.importvote;
 
-import com.bloxbean.cardano.client.exception.CborDeserializationException;
 import com.bloxbean.cardano.client.plutus.annotation.Constr;
 import com.bloxbean.cardano.client.plutus.annotation.PlutusField;
 import com.bloxbean.cardano.client.transaction.spec.BigIntPlutusData;
@@ -26,28 +25,31 @@ import java.util.Optional;
 public class VoteDatum {
 
     @PlutusField
-    byte[] voterKey;
+    String voterKey;
+
     @PlutusField
     long votingPower;
+
     @PlutusField
     long challenge;
+
     @PlutusField
     long proposal;
+
     @PlutusField
     int choice;
 
     public static Optional<VoteDatum> deserialize(byte[] datum) {
         try {
             PlutusData plutusData = PlutusData.deserialize(datum);
-            if (!(plutusData instanceof ConstrPlutusData))
+            if (!(plutusData instanceof ConstrPlutusData constr))
                 return Optional.empty();
 
-            ConstrPlutusData constr = (ConstrPlutusData) plutusData;
             if (constr.getData().getPlutusDataList().size() != 5)
                 return Optional.empty();
 
             List<PlutusData> plutusDataList = constr.getData().getPlutusDataList();
-            byte[] voterKey = ((BytesPlutusData) plutusDataList.get(0)).getValue();
+            String voterKey = HexUtil.encodeHexString(((BytesPlutusData) plutusDataList.get(0)).getValue(), true);
             long votingPower = ((BigIntPlutusData) plutusDataList.get(1)).getValue().longValue();
             long challenge = ((BigIntPlutusData) plutusDataList.get(2)).getValue().longValue();
             long proposal = ((BigIntPlutusData) plutusDataList.get(3)).getValue().longValue();

@@ -7,7 +7,10 @@ import com.bloxbean.cardano.client.api.model.Utxo;
 import com.bloxbean.cardano.client.common.cbor.CborSerializationUtil;
 import com.bloxbean.cardano.client.common.model.Networks;
 import com.bloxbean.cardano.client.exception.CborSerializationException;
+import com.bloxbean.cardano.client.plutus.annotation.Constr;
+import com.bloxbean.cardano.client.plutus.annotation.PlutusField;
 import com.bloxbean.cardano.client.plutus.impl.DefaultPlutusObjectConverter;
+import com.bloxbean.cardano.client.transaction.spec.BytesPlutusData;
 import com.bloxbean.cardano.client.transaction.spec.PlutusV2Script;
 import com.bloxbean.cardano.client.util.HexUtil;
 import com.bloxbean.cardano.client.util.Tuple;
@@ -67,7 +70,7 @@ class HydraVoteImporterApplicationTests {
         var allVotes = randomVoteGenerator.getAllVotes("votes.json");
 
 //        voteImporter.importVotes(allVotes);
-        var batchSize = 5;
+        var batchSize = 2;
 
         var partitions = Lists.partition(allVotes, batchSize);
         for (var votesPart : partitions) {
@@ -89,13 +92,14 @@ class HydraVoteImporterApplicationTests {
         var batchSize = 2;
         var partitions = Lists.partition(allVotes, batchSize);
 
-        for (var votesPart : partitions) {
-            if (votesPart.size() == batchSize) {
-                Thread.sleep(100);
-                voteBatcher.createAndPostBatchTransaction(batchSize);
-            }
-        }
+//        for (var votesPart : partitions) {
+//            if (votesPart.size() == batchSize) {
+//                Thread.sleep(100);
+//                voteBatcher.createAndPostBatchTransaction(batchSize);
+//            }
+//        }
         voteBatcher.createAndPostBatchTransaction(batchSize);
+        //voteBatcher.createAndPostBatchTransaction(batchSize);
     }
 
     // 4. Reduce batch of 20 to 1
@@ -125,22 +129,19 @@ class HydraVoteImporterApplicationTests {
 //        reduceBatch();
     }
 
-
-    @Test
-    public void test001() throws CborSerializationException, CborException {
-        var a = "A";
-
-        var pd = new DefaultPlutusObjectConverter().toPlutusData(a);
-        var bytes = CborSerializationUtil.serialize(pd.serialize(), false);
-        System.out.println(HexUtil.encodeHexString(bytes));
+    @Constr
+    record ABC(@PlutusField  String aa) {
     }
 
-//    @Test
-//    public void getVoteBatches() {
-//        command.getVoteBatches(10);
-//    }
-    //End
+    @Test
+    public void test001() {
+        var a = "B";
 
+        var pd = new DefaultPlutusObjectConverter().toPlutusData(a);
+        BytesPlutusData aaa = (BytesPlutusData) pd;
+        System.out.println(HexUtil.encodeHexString(aaa.getValue()));
+        //System.out.println(HexUtil.encodeHexString(pd.serializeToBytes()));
+    }
 
     //The following are additional tests for command line options and other methods
     @Test
