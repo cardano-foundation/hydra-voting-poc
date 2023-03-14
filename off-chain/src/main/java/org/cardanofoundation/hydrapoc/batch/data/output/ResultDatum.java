@@ -9,7 +9,6 @@ import lombok.NonNull;
 import lombok.extern.slf4j.Slf4j;
 
 @Data
-//@NoArgsConstructor
 @AllArgsConstructor
 @Slf4j
 @Constr(alternative = 0)

@@ -24,8 +24,6 @@ import org.cardanofoundation.hydrapoc.model.Vote;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.retry.annotation.Backoff;
-import org.springframework.retry.annotation.Retryable;
 
 import java.util.List;
 import java.util.Set;
@@ -37,75 +35,23 @@ class HydraVoteImporterApplicationTests {
 
     @Autowired
     private RandomVoteGenerator randomVoteGenerator;
+
     @Autowired
     private VoteImporter voteImporter;
+
     @Autowired
     private Commands command;
+
     @Autowired
     private VoteUtxoFinder voteUtxoFinder;
+
     @Autowired
     private VoteBatcher voteBatcher;
+
     @Autowired
     private VoteBatchReducer voteBatchReducer;
 
     //Run the following tests in sequence to import / create batch / reduce batch step
-
-    //1. Generate 150 votes
-    @Test
-    public void generateVotes() throws Exception {
-        command.generateVotes(10, 150, "votes.json");
-    }
-
-    //2. Import 20 votes from votes.json to script address
-    @Test
-    public void importVotesFromFile() throws Exception {
-        Thread.sleep(5000); //so that all previous messages are consumed from hydra
-        var allVotes = randomVoteGenerator.getAllVotes("votes.json");
-        var batchSize = 5;
-
-        var partitions = Lists.partition(allVotes, batchSize);
-        for (var votesPart : partitions) {
-            if (votesPart.size() == batchSize) {
-                voteImporter.importVotes(votesPart);
-            } else {
-                System.err.println("ignoring the rest.., size:" + votesPart.size());
-            }
-        }
-    }
-
-    //3. Create a batch of 5 votes --> 1 batch
-    //Run this test multiple times to create multiple batches
-    @Test
-    public void createAndPostBatch() throws Exception {
-        Thread.sleep(5000);
-        var allVotes = randomVoteGenerator.getAllVotes("votes.json");
-        var batchSize = 5;
-        var partitions = Lists.partition(allVotes, batchSize);
-
-        for (var votesPart : partitions) {
-            if (votesPart.size() == batchSize) {
-                voteBatcher.createAndPostBatchTransaction(batchSize);
-            }
-        }
-        voteBatcher.createAndPostBatchTransaction(batchSize);
-    }
-
-    // 4. Reduce batch of 20 to 1
-    // Run this test multiple times to reduce batches to 1 batch
-    @Test
-    public void reduceBatch() throws Exception {
-        Thread.sleep(5000);
-
-        for (int i = 0; i < 4; i++) {
-            Thread.sleep(500);
-            voteBatchReducer.postReduceBatchTransaction(4, 0);
-        }
-
-        Thread.sleep(500);
-
-        // final reduction
-        voteBatchReducer.postReduceBatchTransaction(5, 1);
-    }
 
     @Test
     public void fullMonthy01() throws Exception {
@@ -117,12 +63,71 @@ class HydraVoteImporterApplicationTests {
         reduceBatch();
     }
 
-//    @Test
-//    public void getVoteBatches() {
-//        command.getVoteBatches(10);
-//    }
-    //End
+    //1. Generate 150 votes
+    @Test
+    public void generateVotes() throws Exception {
+        command.generateVotes(10, 90, "votes.json");
+    }
 
+    //2. Import 20 votes from votes.json to script address
+    @Test
+    public void importVotesFromFile() throws Exception {
+        //Thread.sleep(5000); //so that all previous messages are consumed from hydra
+        var allVotes = randomVoteGenerator.getAllVotes("votes.json");
+
+        var batchSize = 3;
+
+        var partitions = Lists.partition(allVotes, batchSize);
+        for (var votesPart : partitions) {
+            if (votesPart.size() == batchSize) {
+                Thread.sleep(100);
+                voteImporter.importVotes(votesPart);
+            } else {
+                System.err.println("ignoring the rest.., size:" + votesPart.size());
+            }
+        }
+    }
+
+    //3. Create a batch of 3 votes --> 1 batch
+    //Run this test multiple times to create multiple batches
+    @Test
+    public void createAndPostBatch() throws Exception {
+        //Thread.sleep(5000);
+        var allVotes = randomVoteGenerator.getAllVotes("votes.json");
+        var batchSize = 3;
+        var partitions = Lists.partition(allVotes, batchSize);
+
+        for (var votesPart : partitions) {
+            if (votesPart.size() == batchSize) {
+                Thread.sleep(100);
+                voteBatcher.createAndPostBatchTransaction(batchSize);
+            }
+        }
+    }
+
+    // 4. Reduce batch of 20 to 1
+    // Run this test multiple times to reduce batches to 1 batch
+    @Test
+    public void reduceBatch() throws Exception {
+        var batchSize = 4;
+
+        var allVotes = randomVoteGenerator.getAllVotes("votes.json");
+        var size = Double.valueOf(Math.ceil((double) allVotes.size() / batchSize)).intValue();
+
+        for (int i = 0; i < size; i++) {
+            Thread.sleep(100);
+            voteBatchReducer.postReduceBatchTransaction(batchSize, 0);
+        }
+
+        Thread.sleep(100);
+        voteBatchReducer.postReduceBatchTransaction(3, 1);
+
+        Thread.sleep(100);
+        voteBatchReducer.postReduceBatchTransaction(3, 1);
+
+        Thread.sleep(100);
+        voteBatchReducer.postReduceBatchTransaction(2, 2);
+    }
 
     //The following are additional tests for command line options and other methods
     @Test

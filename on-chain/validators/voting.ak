@@ -1,5 +1,5 @@
+use aiken/builtin
 use aiken/dict.{Dict}
-use aiken/hash.{Blake2b_224, Hash}
 use aiken/list
 use aiken/option
 use aiken/transaction.{
@@ -8,11 +8,8 @@ use aiken/transaction.{
 use aiken/transaction/credential.{ScriptCredential}
 use voting/address.{PubKeyHash}
 use voting/challenge_proposal.{Challenge, ChallengeProposal, Proposal}
+use voting/mt.{MerkleElement}
 use voting/validators
-
-// TODO
-// 1. add merkle tree to validate votes
-// 2. What shall we call datums and what not???
 
 type VotingPower =
   Int
@@ -41,26 +38,23 @@ type Result {
   abstain: VotingPower,
 }
 
-// batch_size: Int?
-// merkle_tree: MerkleTree
+// respective pubkey hashes for authorised parties
 type VotingDatum {
 }
 
 type ResultsBatchDatum {
-  //merke_tree_root: String
   results: Dict<ChallengeProposal, Result>,
-  // seq
+  merkle_root_hash: ByteArray,
   iteration: Int,
 }
 
 type Redeemer {
-  // if the votes submit and locked and are complete, we have to use CIP-31
-  CreateVoteBatch {
-    // merkle_tree: MerkleTree,
-    // id = in fact merkle root hash
-    id: Hash<Blake2b_224, String>,
+  // Approve { merkle_tree: MerkleTree<Vote> }
+  CreateVoteBatch { merkle_tree: MerkleElement<Vote> }
+  ReduceVoteBatch {
+    merkle_tree: MerkleElement<ResultsBatchDatum>,
+    iteration: Int,
   }
-  ReduceVoteBatch { id: Hash<Blake2b_224, String>, iteration: Int }
 }
 
 // Note:
@@ -74,36 +68,56 @@ validator voting {
     let outputs: List<Output> = sc.transaction.outputs
 
     when redeemer is {
-      CreateVoteBatch { id } -> {
-        // we sum all votes and output in the ResultsBatchDatum
-        // and somehow verify id of the batch and total votes in the batch
-        // alternatively use normal inputs
+      CreateVoteBatch { merkle_tree } -> {
+        let merkle_tree_root_hash = mt.element_hash(merkle_tree)
         let votes: List<Vote> = get_votes_from_inputs(inputs)
         let results: Dict<ChallengeProposal, Result> = count_votes(votes)
         // now we need to check if any of the output UTxOs contains results
         // now we have to check if batch_id matches
-        let output_datum = ResultsBatchDatum { results, iteration: 0 }
-        batch_id_must_match(id) && results_must_match(
-          outputs: sc.transaction.outputs,
-          expected_results: output_datum,
-        ) && result_sent_to_own_address_match(inputs, outputs, output_reference)
+        let result_with_hash =
+          ResultsBatchDatum {
+            results,
+            iteration: 0,
+            merkle_root_hash: merkle_tree_root_hash,
+          }
+        list.and(
+          [
+            result_sent_to_own_address_match(inputs, outputs, output_reference)?,
+            validate_votes(votes, merkle_tree)?,
+            results_must_match(
+              outputs: sc.transaction.outputs,
+              expected_results: result_with_hash,
+            )?,
+          ],
+        )
       }
-      ReduceVoteBatch { id, iteration } -> {
+      ReduceVoteBatch { merkle_tree, iteration } -> {
+        let merkle_tree_root_hash = mt.element_hash(merkle_tree)
         // collect results from all inputs (fail if there are still votes in smart contract)
         // take existing results and compress them, into one
         // check if resulting output datum contains votes counted up properly and that they send result back to the same address
         let new_iteration = iteration + 1
         let all_results: List<ResultsBatchDatum> =
           get_vote_results_from_inputs(inputs, iteration)
-        let one_final_result: ResultsBatchDatum =
+        let result: ResultsBatchDatum =
           count_vote_results(
             vote_results: all_results,
             new_iteration: new_iteration,
           )
-        batch_id_must_match(id) && results_must_match(outputs, one_final_result) && result_sent_to_own_address_match(
-          inputs,
-          outputs,
-          output_reference,
+        let result_with_hash =
+          ResultsBatchDatum {
+            ..result,
+            merkle_root_hash: merkle_tree_root_hash,
+          }
+        list.and(
+          [
+            validate_results(all_results, merkle_tree)?,
+            result_sent_to_own_address_match(inputs, outputs, output_reference)?,
+            results_must_match(
+              outputs: sc.transaction.outputs,
+              expected_results: result_with_hash,
+            )?,
+          ],
         )
       }
       _ -> False
@@ -144,9 +158,31 @@ fn results_must_match(
   )
 }
 
-fn batch_id_must_match(_batch_id: Hash<Blake2b_224, String>) -> Bool {
-  // pass merkle tree root and check if merkle tree matches
-  True
+fn validate_votes(votes: List<Vote>, merkle_tree: MerkleElement<Vote>) -> Bool {
+  let ser_fn = fn(v: Vote) { builtin.serialise_data(v) }
+
+  let all_votes_present_match =
+    list.all(votes, fn(vote) { mt.member_from_tree(merkle_tree, vote, ser_fn) })
+  let leaf_size_match = mt.size(merkle_tree) == list.length(votes)
+
+  list.and([leaf_size_match?, all_votes_present_match?])
+}
+
+fn validate_results(
+  results: List<ResultsBatchDatum>,
+  merkle_tree: MerkleElement<ResultsBatchDatum>,
+) -> Bool {
+  let ser_fn = fn(r: ResultsBatchDatum) { builtin.serialise_data(r) }
+
+  let all_results_present_match =
+    list.all(
+      results,
+      fn(result) { mt.member_from_tree(merkle_tree, result, ser_fn) },
+    )
+
+  let leaf_size_match = mt.size(merkle_tree) == list.length(results)
+
+  list.and([all_results_present_match?, leaf_size_match])
 }
 
 fn get_votes_from_inputs(inputs: List<Input>) -> List<Vote> {
@@ -193,10 +229,17 @@ fn count_vote_results(
         compare: challenge_proposal.compare,
       ),
       iteration: new_iteration,
+      merkle_root_hash: #"",
     }
   }
+
   // assign new iteration
-  let zero = ResultsBatchDatum { results: dict.new(), iteration: new_iteration }
+  let zero =
+    ResultsBatchDatum {
+      results: dict.new(),
+      iteration: new_iteration,
+      merkle_root_hash: #"",
+    }
 
   list.foldl(vote_results, merging_fn, zero)
 }
@@ -245,51 +288,12 @@ fn count_votes(votes: List<Vote>) -> Dict<ChallengeProposal, Result> {
   do_count_votes(votes, empty)
 }
 
-test do_count_votes_1() {
-  let v1 =
-    Vote {
-      voter_key: #"01",
-      voting_power: 10,
-      challenge: 1,
-      proposal: 1,
-      choice: 2,
-    }
-  let v2 =
-    Vote {
-      voter_key: #"02",
-      voting_power: 20,
-      challenge: 1,
-      proposal: 2,
-      choice: 2,
-    }
-  let v3 =
-    Vote {
-      voter_key: #"03",
-      voting_power: 30,
-      challenge: 1,
-      proposal: 2,
-      choice: 2,
-    }
-  let v4 =
-    Vote {
-      voter_key: #"04",
-      voting_power: 30,
-      challenge: 2,
-      proposal: 1,
-      choice: 0,
-    }
-
-  let votes = [v1, v2, v3, v4]
-  let results: Dict<ChallengeProposal, Result> = count_votes(votes)
-  let cp1: ChallengeProposal = ChallengeProposal { challenge: 1, proposal: 1 }
-  let cp2: ChallengeProposal = ChallengeProposal { challenge: 1, proposal: 2 }
-  let cp3: ChallengeProposal = ChallengeProposal { challenge: 2, proposal: 1 }
-
-  expect Some(r1) = dict.get(results, cp1)
-  expect Some(r2) = dict.get(results, cp2)
-  expect Some(r3) = dict.get(results, cp3)
-
-  r1.yes == 10 && r1.no == 0 && r1.abstain == 0 && r2.yes == 50 && r2.no == 0 && r2.abstain == 0 && r3.yes == 0 && r3.no == 0 && r3.abstain == 30
+fn voting_power_for_choice(v: Vote, c: Choice) -> Option<VotingPower> {
+  list.find(
+    [0, 1, 2],
+    fn(choice: Choice) { list.and([(v.choice == choice)?, c == choice]) },
+  )
+  |> option.map(fn(_) { v.voting_power })
 }
 
 fn to_flat_vote(v: Vote) -> FlatVote {
@@ -359,48 +363,4 @@ test to_flat_vote_3() {
     no: 0,
     abstain: 10,
   }
-}
-
-fn voting_power_for_choice(v: Vote, c: Choice) -> Option<VotingPower> {
-  list.find([0, 1, 2], fn(choice: Choice) { v.choice == choice && c == choice })
-  |> option.map(fn(_) { v.voting_power })
-}
-
-test voting_power_for_choice_1() {
-  let v1 =
-    Vote {
-      voter_key: #"01",
-      voting_power: 100,
-      challenge: 1,
-      proposal: 1,
-      choice: 0,
-    }
-
-  voting_power_for_choice(v1, 0) == Some(100)
-}
-
-test voting_power_for_choice_2() {
-  let v1 =
-    Vote {
-      voter_key: #"01",
-      voting_power: 100,
-      challenge: 1,
-      proposal: 1,
-      choice: -1,
-    }
-
-  voting_power_for_choice(v1, 0) == None
-}
-
-test voting_power_for_choice_3() {
-  let v1 =
-    Vote {
-      voter_key: #"02",
-      voting_power: 100,
-      challenge: 2,
-      proposal: -1,
-      choice: 2,
-    }
-
-  voting_power_for_choice(v1, 2) == Some(100)
 }

@@ -14,6 +14,7 @@ import org.cardanofoundation.hydra.client.model.query.response.Response;
 import org.cardanofoundation.hydra.client.model.query.response.TxInvalidResponse;
 import org.cardanofoundation.hydra.client.model.query.response.TxValidResponse;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Component;
 import reactor.core.publisher.Mono;
 import reactor.core.publisher.MonoSink;
@@ -28,9 +29,11 @@ import java.util.concurrent.TimeUnit;
 
 @Component
 @Slf4j
+@ConditionalOnProperty(prefix = "hydra", name = "ws.url")
 public class HydraClient implements HydraStateEventListener, HydraQueryEventListener {
 
     private HydraWSClient hydraWSClient;
+
     @Value("${hydra.ws.url}")
     private String hydraWsUrl;
 

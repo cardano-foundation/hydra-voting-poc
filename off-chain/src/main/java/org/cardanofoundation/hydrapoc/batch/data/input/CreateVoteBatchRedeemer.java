@@ -1,13 +1,11 @@
 package org.cardanofoundation.hydrapoc.batch.data.input;
 
-import com.bloxbean.cardano.client.crypto.Blake2bUtil;
-import com.bloxbean.cardano.client.crypto.KeyGenUtil;
 import com.bloxbean.cardano.client.plutus.annotation.Constr;
 import com.bloxbean.cardano.client.plutus.annotation.PlutusField;
-import com.bloxbean.cardano.client.util.HexUtil;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import org.cardanofoundation.merkle.core.MerkleElement;
 
 @Data
 @AllArgsConstructor
@@ -16,15 +14,14 @@ import lombok.NoArgsConstructor;
 public class CreateVoteBatchRedeemer {
 
     @PlutusField
-    private String id;
+    private MerkleElement merkleTree;
 
-    public static CreateVoteBatchRedeemer create() {
+    public static CreateVoteBatchRedeemer create(MerkleElement merkleTree) {
         try {
-            byte[] bytes = KeyGenUtil.generateKey().getVkey().getBytes(); // any random bytes
-            String id = HexUtil.encodeHexString(Blake2bUtil.blake2bHash224(bytes));
-            return new CreateVoteBatchRedeemer(id);
+            return new CreateVoteBatchRedeemer(merkleTree);
         } catch (Exception e) {
             throw new RuntimeException("Create failed", e);
         }
     }
+
 }

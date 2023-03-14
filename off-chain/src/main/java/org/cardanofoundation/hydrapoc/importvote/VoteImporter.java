@@ -19,18 +19,17 @@ import com.bloxbean.cardano.client.transaction.spec.TransactionOutput;
 import com.bloxbean.cardano.client.transaction.spec.Value;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import lombok.val;
 import org.cardanofoundation.hydrapoc.commands.PlutusScriptUtil;
+import org.cardanofoundation.hydrapoc.commands.TransactionUtil;
 import org.cardanofoundation.hydrapoc.common.OperatorAccountProvider;
 import org.cardanofoundation.hydrapoc.model.Vote;
-import org.cardanofoundation.hydrapoc.commands.TransactionUtil;
 import org.springframework.retry.annotation.Backoff;
 import org.springframework.retry.annotation.Retryable;
 import org.springframework.stereotype.Component;
 
 import java.math.BigInteger;
 import java.util.Collection;
-import java.util.List;
-import java.util.stream.Collectors;
 
 import static com.bloxbean.cardano.client.common.ADAConversionUtil.adaToLovelace;
 
@@ -55,7 +54,7 @@ public class VoteImporter {
     }
 
     private String createTransactionWithDatum(Collection<Vote> votes) throws Exception {
-        List<VoteDatum> voteDatumList = votes.stream()
+        val voteDatumList = votes.stream()
                 .map(vote -> VoteDatum.builder()
                         .voterKey(vote.getVoterKey())
                         .votingPower(vote.getVotingPower())
@@ -63,7 +62,7 @@ public class VoteImporter {
                         .proposal(vote.getProposal())
                         .choice(vote.getChoice().toValue())
                         .build()
-                ).collect(Collectors.toList());
+                ).toList();
 
         String sender = operatorAccountProvider.getOperatorAddress();
         log.info("Sender Address: " + sender);
@@ -71,8 +70,8 @@ public class VoteImporter {
         log.info("Contract Address: " + voteBatchContractAddress);
 
         //Create a empty output builder
-        TxOutputBuilder txOutputBuilder = (context, outputs) -> {
-        };
+        TxOutputBuilder txOutputBuilder = (context, outputs) -> {};
+
         //Iterate through voteDatumLists and create TransactionOutputs
         for (VoteDatum voteDatum : voteDatumList) {
             PlutusData datum = plutusObjectConverter.toPlutusData(voteDatum);

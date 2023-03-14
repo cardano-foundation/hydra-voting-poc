@@ -1,5 +1,6 @@
 package org.cardanofoundation.hydrapoc.generator;
 
+import com.bloxbean.cardano.client.util.HexUtil;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.extern.slf4j.Slf4j;
@@ -73,7 +74,8 @@ public class RandomVoteGenerator {
 
             Voter voter = voters.get(randomVoterIndex);
             ChallengeProposal challengeProposal = challengeProposals.get(randomChallengeIndex);
-            Vote vote = new Vote(voter.pubKey(), voter.votingPower(), challengeProposal.challenge(),
+
+            Vote vote = new Vote(HexUtil.encodeHexString(voter.pubKey(), true), voter.votingPower(), challengeProposal.challenge(),
                     challengeProposal.proposal(), getRandomChoice());
             votes.add(vote);
         }

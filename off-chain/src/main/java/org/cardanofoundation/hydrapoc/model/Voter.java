@@ -1,3 +1,3 @@
 package org.cardanofoundation.hydrapoc.model;
 
-public record Voter(String pubKey, long votingPower) {}
+public record Voter(byte[] pubKey, long votingPower) {}
