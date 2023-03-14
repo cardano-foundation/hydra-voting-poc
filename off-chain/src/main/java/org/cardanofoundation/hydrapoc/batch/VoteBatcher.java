@@ -5,11 +5,12 @@ import com.bloxbean.cardano.client.api.ProtocolParamsSupplier;
 import com.bloxbean.cardano.client.api.TransactionProcessor;
 import com.bloxbean.cardano.client.api.UtxoSupplier;
 import com.bloxbean.cardano.client.api.model.Amount;
-import com.bloxbean.cardano.client.coinselection.impl.DefaultUtxoSelectionStrategyImpl;
+import com.bloxbean.cardano.client.coinselection.impl.LargestFirstUtxoSelectionStrategy;
 import com.bloxbean.cardano.client.function.Output;
-import com.bloxbean.cardano.client.function.TxBuilder;
 import com.bloxbean.cardano.client.function.TxBuilderContext;
-import com.bloxbean.cardano.client.function.helper.*;
+import com.bloxbean.cardano.client.function.helper.CollateralBuilders;
+import com.bloxbean.cardano.client.function.helper.InputBuilders;
+import com.bloxbean.cardano.client.function.helper.ScriptCallContextProviders;
 import com.bloxbean.cardano.client.function.helper.model.ScriptCallContext;
 import com.bloxbean.cardano.client.plutus.api.PlutusObjectConverter;
 import com.bloxbean.cardano.client.plutus.impl.DefaultPlutusObjectConverter;
@@ -121,7 +122,7 @@ public class VoteBatcher {
         log.info(JsonUtil.getPrettyJson(resultBatchDatum));
 
         // Build and post contract txn\
-        val utxoSelectionStrategy = new DefaultUtxoSelectionStrategyImpl(utxoSupplier);
+        val utxoSelectionStrategy = new LargestFirstUtxoSelectionStrategy(utxoSupplier);
         val collateralUtxos = utxoSelectionStrategy.select(sender, new Amount(LOVELACE, adaToLovelace(1000)), Collections.emptySet());
 
         // Build the expected output
