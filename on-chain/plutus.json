@@ -41,7 +41,7 @@
           "fields": [
             {
               "title": "merkle_tree",
-              "$ref": "#/definitions/voting~1mt~1MerkleElement$voting~1Vote"
+              "$ref": "#/definitions/voting~1merkle_tree~1MerkleElement$voting~1Vote"
             }
           ]
         },
@@ -52,7 +52,7 @@
           "fields": [
             {
               "title": "merkle_tree",
-              "$ref": "#/definitions/voting~1mt~1MerkleElement$voting~1ResultsBatchDatum"
+              "$ref": "#/definitions/voting~1merkle_tree~1MerkleElement$voting~1ResultsBatchDatum"
             },
             {
               "title": "iteration",
@@ -66,7 +66,7 @@
       "title": "VotingDatum",
       "anyOf": []
     },
-    "voting/mt/MerkleElement$voting/ResultsBatchDatum": {
+    "voting/merkle_tree/MerkleElement$voting/ResultsBatchDatum": {
       "title": "MerkleElement",
       "anyOf": [
         {
@@ -97,17 +97,17 @@
             },
             {
               "title": "left",
-              "$ref": "#/definitions/voting~1mt~1MerkleElement$voting~1ResultsBatchDatum"
+              "$ref": "#/definitions/voting~1merkle_tree~1MerkleElement$voting~1ResultsBatchDatum"
             },
             {
               "title": "right",
-              "$ref": "#/definitions/voting~1mt~1MerkleElement$voting~1ResultsBatchDatum"
+              "$ref": "#/definitions/voting~1merkle_tree~1MerkleElement$voting~1ResultsBatchDatum"
             }
           ]
         }
       ]
     },
-    "voting/mt/MerkleElement$voting/Vote": {
+    "voting/merkle_tree/MerkleElement$voting/Vote": {
       "title": "MerkleElement",
       "anyOf": [
         {
@@ -138,11 +138,11 @@
             },
             {
               "title": "left",
-              "$ref": "#/definitions/voting~1mt~1MerkleElement$voting~1Vote"
+              "$ref": "#/definitions/voting~1merkle_tree~1MerkleElement$voting~1Vote"
             },
             {
               "title": "right",
-              "$ref": "#/definitions/voting~1mt~1MerkleElement$voting~1Vote"
+              "$ref": "#/definitions/voting~1merkle_tree~1MerkleElement$voting~1Vote"
             }
           ]
         }

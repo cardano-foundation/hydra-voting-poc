@@ -8,7 +8,7 @@ use aiken/transaction.{
 use aiken/transaction/credential.{ScriptCredential}
 use voting/address.{PubKeyHash}
 use voting/challenge_proposal.{Challenge, ChallengeProposal, Proposal}
-use voting/mt.{MerkleElement}
+use voting/merkle_tree.{MerkleElement}
 use voting/validators
 
 type VotingPower =
@@ -69,7 +69,7 @@ validator voting {
 
     when redeemer is {
       CreateVoteBatch { merkle_tree } -> {
-        let merkle_tree_root_hash = mt.element_hash(merkle_tree)
+        let merkle_tree_root_hash = merkle_tree.element_hash(merkle_tree)
         let votes: List<Vote> = get_votes_from_inputs(inputs)
         let results: Dict<ChallengeProposal, Result> = count_votes(votes)
         // now we need to check if any of the output UTxOs contains results
@@ -92,7 +92,7 @@ validator voting {
         )
       }
       ReduceVoteBatch { merkle_tree, iteration } -> {
-        let merkle_tree_root_hash = mt.element_hash(merkle_tree)
+        let merkle_tree_root_hash = merkle_tree.element_hash(merkle_tree)
         // collect results from all inputs (fail if there are still votes in smart contract)
         // take existing results and compress them, into one
         // check if resulting output datum contains votes counted up properly and that they send result back to the same address
@@ -162,8 +162,11 @@ fn validate_votes(votes: List<Vote>, merkle_tree: MerkleElement<Vote>) -> Bool {
   let ser_fn = fn(v: Vote) { builtin.serialise_data(v) }
 
   let all_votes_present_match =
-    list.all(votes, fn(vote) { mt.member_from_tree(merkle_tree, vote, ser_fn) })
-  let leaf_size_match = mt.size(merkle_tree) == list.length(votes)
+    list.all(
+      votes,
+      fn(vote) { merkle_tree.member_from_tree(merkle_tree, vote, ser_fn) },
+    )
+  let leaf_size_match = merkle_tree.size(merkle_tree) == list.length(votes)
 
   list.and([leaf_size_match?, all_votes_present_match?])
 }
@@ -177,10 +180,10 @@ fn validate_results(
   let all_results_present_match =
     list.all(
       results,
-      fn(result) { mt.member_from_tree(merkle_tree, result, ser_fn) },
+      fn(result) { merkle_tree.member_from_tree(merkle_tree, result, ser_fn) },
     )
 
-  let leaf_size_match = mt.size(merkle_tree) == list.length(results)
+  let leaf_size_match = merkle_tree.size(merkle_tree) == list.length(results)
 
   list.and([all_results_present_match?, leaf_size_match])
 }
@@ -293,20 +296,20 @@ fn voting_power_for_choice(v: Vote, c: Choice) -> Option<VotingPower> {
     [0, 1, 2],
     fn(choice: Choice) { list.and([(v.choice == choice)?, c == choice]) },
   )
-  |> option.map(fn(_) { v.voting_power })
+    |> option.map(fn(_) { v.voting_power })
 }
 
 fn to_flat_vote(v: Vote) -> FlatVote {
   let cp = ChallengeProposal { challenge: v.challenge, proposal: v.proposal }
   let y =
     voting_power_for_choice(v, 2)
-    |> option.or_else(0)
+      |> option.or_else(0)
   let n =
     voting_power_for_choice(v, 1)
-    |> option.or_else(0)
+      |> option.or_else(0)
   let a =
     voting_power_for_choice(v, 0)
-    |> option.or_else(0)
+      |> option.or_else(0)
 
   FlatVote { key: cp, yes: y, no: n, abstain: a }
 }
