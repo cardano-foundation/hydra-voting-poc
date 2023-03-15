@@ -51,8 +51,6 @@ class HydraVoteImporterApplicationTests {
     @Autowired
     private VoteBatchReducer voteBatchReducer;
 
-    //Run the following tests in sequence to import / create batch / reduce batch step
-
     @Test
     public void fullMonthy01() throws Exception {
         System.out.println("importing votes...");
@@ -88,7 +86,7 @@ class HydraVoteImporterApplicationTests {
         }
     }
 
-    //3. Create a batch of 3 votes --> 1 batch
+    //3. Create a batch of 3 votes --> 1 result
     //Run this test multiple times to create multiple batches
     @Test
     public void createAndPostBatch() throws Exception {

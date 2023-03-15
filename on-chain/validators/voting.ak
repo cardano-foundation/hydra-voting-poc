@@ -1,5 +1,7 @@
 use aiken/builtin
+use aiken/bytearray
 use aiken/dict.{Dict}
+use aiken/hash.{Hash, Sha2_256}
 use aiken/list
 use aiken/option
 use aiken/transaction.{
@@ -50,16 +52,13 @@ type ResultsBatchDatum {
 
 type Redeemer {
   // Approve { merkle_tree: MerkleTree<Vote> }
-  CreateVoteBatch { merkle_tree: MerkleElement<Vote> }
-  ReduceVoteBatch {
-    merkle_tree: MerkleElement<ResultsBatchDatum>,
+  CreateVoteBatch { off_chain_merkle_tree_root_hash: Hash<Sha2_256, Vote> }
+  ReduceResults {
+    off_chain_merkle_tree_root_hash: Hash<Sha2_256, ResultsBatchDatum>,
     iteration: Int,
   }
 }
 
-// Note:
-// Smart Contract assumes that votes are deduped across all batches
-// otherwise it cannot possibly work because some votes could be counted twice
 validator voting {
   fn(_voting_datum: VotingDatum, redeemer: Redeemer, sc: ScriptContext) -> Bool {
     // On L2 (Hydra) one will typically lock votes with 0 ADA but on L1 of course each eUTxO is guarded by ca. 1,7 ADA
@@ -68,8 +67,7 @@ validator voting {
     let outputs: List<Output> = sc.transaction.outputs
 
     when redeemer is {
-      CreateVoteBatch { merkle_tree } -> {
-        let merkle_tree_root_hash = merkle_tree.element_hash(merkle_tree)
+      CreateVoteBatch { off_chain_merkle_tree_root_hash } -> {
         let votes: List<Vote> = get_votes_from_inputs(inputs)
         let results: Dict<ChallengeProposal, Result> = count_votes(votes)
         // now we need to check if any of the output UTxOs contains results
@@ -78,12 +76,13 @@ validator voting {
           ResultsBatchDatum {
             results,
             iteration: 0,
-            merkle_root_hash: merkle_tree_root_hash,
+            merkle_root_hash: off_chain_merkle_tree_root_hash,
           }
         list.and(
           [
+            (bytearray.length(off_chain_merkle_tree_root_hash) == 32)?,
             result_sent_to_own_address_match(inputs, outputs, output_reference)?,
-            validate_votes(votes, merkle_tree)?,
+            validate_votes(votes, off_chain_merkle_tree_root_hash)?,
             results_must_match(
               outputs: sc.transaction.outputs,
               expected_results: result_with_hash,
@@ -91,8 +90,7 @@ validator voting {
           ],
         )
       }
-      ReduceVoteBatch { merkle_tree, iteration } -> {
-        let merkle_tree_root_hash = merkle_tree.element_hash(merkle_tree)
+      ReduceResults { off_chain_merkle_tree_root_hash, iteration } -> {
         // collect results from all inputs (fail if there are still votes in smart contract)
         // take existing results and compress them, into one
         // check if resulting output datum contains votes counted up properly and that they send result back to the same address
@@ -107,11 +105,12 @@ validator voting {
         let result_with_hash =
           ResultsBatchDatum {
             ..result,
-            merkle_root_hash: merkle_tree_root_hash,
+            merkle_root_hash: off_chain_merkle_tree_root_hash,
           }
         list.and(
           [
-            validate_results(all_results, merkle_tree)?,
+            (bytearray.length(off_chain_merkle_tree_root_hash) == 32)?,
+            validate_results(all_results, off_chain_merkle_tree_root_hash)?,
             result_sent_to_own_address_match(inputs, outputs, output_reference)?,
             results_must_match(
               outputs: sc.transaction.outputs,
@@ -158,34 +157,31 @@ fn results_must_match(
   )
 }
 
-fn validate_votes(votes: List<Vote>, merkle_tree: MerkleElement<Vote>) -> Bool {
+fn validate_votes(
+  votes: List<Vote>,
+  off_chain_merkle_tree_root_hash: Hash<Sha2_256, Vote>,
+) -> Bool {
   let ser_fn = fn(v: Vote) { builtin.serialise_data(v) }
 
-  let all_votes_present_match =
-    list.all(
-      votes,
-      fn(vote) { merkle_tree.member_from_tree(merkle_tree, vote, ser_fn) },
-    )
-  let leaf_size_match = merkle_tree.size(merkle_tree) == list.length(votes)
+  let mt: MerkleElement<Vote> = merkle_tree.from_list(votes, ser_fn)
+  let on_chain_merkle_tree_root_hash: Hash<Sha2_256, Vote> =
+    merkle_tree.element_hash(mt)
 
-  list.and([leaf_size_match?, all_votes_present_match?])
+  on_chain_merkle_tree_root_hash == off_chain_merkle_tree_root_hash
 }
 
 fn validate_results(
   results: List<ResultsBatchDatum>,
-  merkle_tree: MerkleElement<ResultsBatchDatum>,
+  off_chain_merkle_tree_root_hash: Hash<Sha2_256, ResultsBatchDatum>,
 ) -> Bool {
   let ser_fn = fn(r: ResultsBatchDatum) { builtin.serialise_data(r) }
 
-  let all_results_present_match =
-    list.all(
-      results,
-      fn(result) { merkle_tree.member_from_tree(merkle_tree, result, ser_fn) },
-    )
+  let mt: MerkleElement<ResultsBatchDatum> =
+    merkle_tree.from_list(results, ser_fn)
+  let on_chain_merkle_tree_root_hash: Hash<Sha2_256, ResultsBatchDatum> =
+    merkle_tree.element_hash(mt)
 
-  let leaf_size_match = merkle_tree.size(merkle_tree) == list.length(results)
-
-  list.and([all_results_present_match?, leaf_size_match])
+  on_chain_merkle_tree_root_hash == off_chain_merkle_tree_root_hash
 }
 
 fn get_votes_from_inputs(inputs: List<Input>) -> List<Vote> {

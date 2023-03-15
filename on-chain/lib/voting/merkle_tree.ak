@@ -5,24 +5,24 @@ use aiken/option.{choice, is_none}
 
 pub opaque type MerkleElement<a> {
   Empty
-  Leaf { hash: Hash<Sha2_256, ByteArray> }
+  Leaf { hash: Hash<Sha2_256, a> }
   Node {
-    hash: Hash<Sha2_256, ByteArray>,
+    hash: Hash<Sha2_256, a>,
     left: MerkleElement<a>,
     right: MerkleElement<a>,
   }
 }
 
 pub type Proof<a> =
-  List<ProofItem>
+  List<ProofItem<a>>
 
-pub type ProofItem {
-  Left { hash: Hash<Sha2_256, ByteArray> }
-  Right { hash: Hash<Sha2_256, ByteArray> }
+pub type ProofItem<a> {
+  Left { hash: Hash<Sha2_256, a> }
+  Right { hash: Hash<Sha2_256, a> }
 }
 
 // Function returning a hash of a given Merkle Tree element
-pub fn element_hash(self: MerkleElement<a>) -> Hash<Sha2_256, ByteArray> {
+pub fn element_hash(self: MerkleElement<a>) -> Hash<Sha2_256, a> {
   when self is {
     Empty -> #""
     Leaf { hash } -> hash
@@ -164,7 +164,7 @@ test is_empty_2() {
 
 fn do_proof(
   self: MerkleElement<a>,
-  item_hash: Hash<Sha2_256, ByteArray>,
+  item_hash: Hash<Sha2_256, a>,
   proof: Proof<a>,
   serialise_fn: fn(a) -> ByteArray,
 ) -> Option<Proof<a>> {
@@ -225,7 +225,8 @@ test get_proof_1() {
   let mt = from_list(items, serialise_fn)
   let serialise_fn = create_string_item_serialise_fn()
 
-  let maybe_proof: Option<Proof<a>> = get_proof(mt, @"parrot", serialise_fn)
+  let maybe_proof: Option<Proof<String>> =
+    get_proof(mt, @"parrot", serialise_fn)
 
   is_none(maybe_proof)
 }
@@ -237,7 +238,7 @@ test get_proof_2() {
   let serialise_fn = create_string_item_serialise_fn()
   let mt = from_list(items, serialise_fn)
 
-  let maybe_proof: Option<Proof<a>> = get_proof(mt, dog, serialise_fn)
+  let maybe_proof: Option<Proof<String>> = get_proof(mt, dog, serialise_fn)
 
   expect Some(proof) = maybe_proof
 
@@ -263,7 +264,7 @@ test get_proof_3() {
       ),
     )
 
-  let maybe_proof: Option<Proof<a>> = get_proof(mt, dog, serialise_fn)
+  let maybe_proof: Option<Proof<String>> = get_proof(mt, dog, serialise_fn)
 
   expect Some(proof) = maybe_proof
 
@@ -294,7 +295,7 @@ test get_proof_4() {
         sha2_256(serialise_fn(horse)),
       ),
     )
-  let maybe_proof: Option<Proof<a>> = get_proof(mt, dog, serialise_fn)
+  let maybe_proof: Option<Proof<String>> = get_proof(mt, dog, serialise_fn)
 
   expect Some(proof) = maybe_proof
 
@@ -563,7 +564,7 @@ pub fn member_from_hash(
 // and a 'Proof'.
 pub fn member(
   item: a,
-  element_hash: Hash<Sha2_256, ByteArray>,
+  element_hash: Hash<Sha2_256, a>,
   proof: Proof<a>,
   serialise_fn: fn(a) -> ByteArray,
 ) -> Bool {
@@ -724,7 +725,7 @@ test member_from_tree_32() {
   member_from_tree(tree: mt, item: dog, serialise_fn: serialise_fn)
 }
 
-fn get_proof_item_value(proof_item: ProofItem) -> Hash<Sha2_256, ByteArray> {
+fn get_proof_item_value(proof_item: ProofItem<a>) -> Hash<Sha2_256, a> {
   when proof_item is {
     Left(hash) -> hash
     Right(hash) -> hash

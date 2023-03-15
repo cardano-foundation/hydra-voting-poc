@@ -5,11 +5,9 @@ import com.bloxbean.cardano.client.api.ProtocolParamsSupplier;
 import com.bloxbean.cardano.client.api.TransactionProcessor;
 import com.bloxbean.cardano.client.api.UtxoSupplier;
 import com.bloxbean.cardano.client.api.model.Amount;
-import com.bloxbean.cardano.client.coinselection.impl.DefaultUtxoSelectionStrategyImpl;
 import com.bloxbean.cardano.client.coinselection.impl.LargestFirstUtxoSelectionStrategy;
 import com.bloxbean.cardano.client.function.Output;
 import com.bloxbean.cardano.client.function.TxBuilderContext;
-import com.bloxbean.cardano.client.function.helper.BalanceTxBuilders;
 import com.bloxbean.cardano.client.function.helper.CollateralBuilders;
 import com.bloxbean.cardano.client.function.helper.InputBuilders;
 import com.bloxbean.cardano.client.function.helper.ScriptCallContextProviders;
@@ -81,6 +79,7 @@ public class VoteBatchReducer {
         val mt = MerkleTree.createFromItems(results, r -> {
             return sha2_256(plutusObjectConverter.toPlutusData(r).serializeToBytes());
         });
+        val merkleTreeRootHash = mt.elementHash();
 
         // Calculate group result batch datum
         val reduceVoteBatchDatum = groupResultBatchDatum(results, fromIteration + 1);
@@ -116,7 +115,7 @@ public class VoteBatchReducer {
                         .mem(BigInteger.valueOf(0))
                         .steps(BigInteger.valueOf(0))
                         .build())
-                .redeemer(plutusObjectConverter.toPlutusData(ReduceVoteBatchRedeemer.create(mt, fromIteration)))
+                .redeemer(plutusObjectConverter.toPlutusData(ReduceVoteBatchRedeemer.create(merkleTreeRootHash, fromIteration)))
                 .redeemerTag(RedeemerTag.Spend).build())
                 .toList();
 
