@@ -6,7 +6,6 @@ import com.bloxbean.cardano.client.transaction.spec.BigIntPlutusData;
 import com.bloxbean.cardano.client.transaction.spec.BytesPlutusData;
 import com.bloxbean.cardano.client.transaction.spec.ConstrPlutusData;
 import com.bloxbean.cardano.client.transaction.spec.PlutusData;
-import com.bloxbean.cardano.client.util.HexUtil;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -25,7 +24,7 @@ import java.util.Optional;
 public class VoteDatum {
 
     @PlutusField
-    String voterKey;
+    byte[] voterKey;
 
     @PlutusField
     long votingPower;
@@ -49,7 +48,7 @@ public class VoteDatum {
                 return Optional.empty();
 
             List<PlutusData> plutusDataList = constr.getData().getPlutusDataList();
-            String voterKey = HexUtil.encodeHexString(((BytesPlutusData) plutusDataList.get(0)).getValue(), true);
+            byte[] voterKey = ((BytesPlutusData) plutusDataList.get(0)).getValue();
             long votingPower = ((BigIntPlutusData) plutusDataList.get(1)).getValue().longValue();
             long challenge = ((BigIntPlutusData) plutusDataList.get(2)).getValue().longValue();
             long proposal = ((BigIntPlutusData) plutusDataList.get(3)).getValue().longValue();

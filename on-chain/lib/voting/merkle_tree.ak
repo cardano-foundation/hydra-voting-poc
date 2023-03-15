@@ -324,12 +324,12 @@ fn do_from_list(
       let cutoff: Int = len / 2
       let left =
         all
-        |> list.take(cutoff)
-        |> do_from_list(cutoff, serialise_fn)
+          |> list.take(cutoff)
+          |> do_from_list(cutoff, serialise_fn)
       let right =
         all
-        |> list.drop(cutoff)
-        |> do_from_list(len - cutoff, serialise_fn)
+          |> list.drop(cutoff)
+          |> do_from_list(len - cutoff, serialise_fn)
       let hash = combine_hash(element_hash(left), element_hash(right))
       Node { hash, left, right }
     }
@@ -466,12 +466,12 @@ fn do_from_hashes_list(
       let cutoff: Int = len / 2
       let left =
         all
-        |> list.take(cutoff)
-        |> do_from_hashes_list(cutoff)
+          |> list.take(cutoff)
+          |> do_from_hashes_list(cutoff)
       let right =
         all
-        |> list.drop(cutoff)
-        |> do_from_hashes_list(len - cutoff)
+          |> list.drop(cutoff)
+          |> do_from_hashes_list(len - cutoff)
       let hash = combine_hash(element_hash(left), element_hash(right))
       Node { hash, left, right }
     }
@@ -674,13 +674,7 @@ pub fn member_from_tree(
   item: a,
   serialise_fn: fn(a) -> ByteArray,
 ) -> Bool {
-  let proof: Option<Proof<a>> = get_proof(tree, item, serialise_fn)
-  let rh = element_hash(tree)
-
-  when proof is {
-    Some(p) -> member(item, rh, p, serialise_fn)
-    None -> False
-  }
+  get_proof(tree, item, serialise_fn) |> option.is_some
 }
 
 test member_from_tree_1() {

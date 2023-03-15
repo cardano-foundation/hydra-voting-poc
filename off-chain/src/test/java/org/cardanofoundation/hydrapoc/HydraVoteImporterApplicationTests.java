@@ -184,9 +184,13 @@ class HydraVoteImporterApplicationTests {
 
     @Test
     public void fuel() throws Exception {
-        List<String> addresses = List.of("addr_test1vr2jvlvw62kv82x8gn0pewn6n5r82m6zxxn6c7vp04t9avs3wgpxv",
+        List<String> addresses = List.of(
+                "addr_test1vr2jvlvw62kv82x8gn0pewn6n5r82m6zxxn6c7vp04t9avs3wgpxv",
                 "addr_test1vz4jpljkq88278xat56pcy240ey9ng9wza8qtdavg6f7vqs0z8903",
-                "addr_test1vzh03tyuujtl4tfq4maduaxk0pvt893xy4g4l6cn4k7mtxs7rmsjz");
+                "addr_test1vzh03tyuujtl4tfq4maduaxk0pvt893xy4g4l6cn4k7mtxs7rmsjz"
+        );
+
         fuelTransaction.fuel(addresses);
     }
+
 }
