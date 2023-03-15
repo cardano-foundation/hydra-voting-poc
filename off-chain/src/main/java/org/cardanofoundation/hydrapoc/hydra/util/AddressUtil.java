@@ -29,6 +29,5 @@ public class AddressUtil {
         String address3 = getAddressFromVerificationKey("58202e6a3289f00c4cb1f1bac47aa1532ce153b0084502b44f8c02eaa482eec5bf3f");
         //addr_test1vzh03tyuujtl4tfq4maduaxk0pvt893xy4g4l6cn4k7mtxs7rmsjz
         System.out.println(address3);
-
     }
 }
