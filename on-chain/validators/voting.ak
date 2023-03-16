@@ -1,3 +1,6 @@
+use acca/collections/mt.{MerkleElement}
+use acca/hash.{PubKeyHash} as ahash
+use acca/validators
 use aiken/builtin
 use aiken/bytearray
 use aiken/dict.{Dict}
@@ -8,10 +11,7 @@ use aiken/transaction.{
   InlineDatum, Input, Output, OutputReference, ScriptContext, Spend,
 }
 use aiken/transaction/credential.{ScriptCredential}
-use voting/address.{PubKeyHash}
 use voting/challenge_proposal.{Challenge, ChallengeProposal, Proposal}
-use voting/mt.{MerkleElement}
-use voting/validators
 
 type VotingPower =
   Int
