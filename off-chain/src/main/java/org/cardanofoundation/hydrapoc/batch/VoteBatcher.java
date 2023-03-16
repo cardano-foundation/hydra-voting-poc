@@ -118,7 +118,7 @@ public class VoteBatcher {
 
         // Build and post contract txn
         val utxoSelectionStrategy = new LargestFirstUtxoSelectionStrategy(utxoSupplier);
-        val collateralUtxos = utxoSelectionStrategy.select(sender, new Amount(LOVELACE, adaToLovelace(1000)), Collections.emptySet());
+        val collateralUtxos = utxoSelectionStrategy.select(sender, new Amount(LOVELACE, adaToLovelace(1)), Collections.emptySet());
 
         // Build the expected output
         val outputDatum = plutusObjectConverter.toPlutusData(resultBatchDatum);

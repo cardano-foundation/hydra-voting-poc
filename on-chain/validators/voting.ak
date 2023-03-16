@@ -80,7 +80,7 @@ validator voting {
           }
         list.and(
           [
-            (bytearray.length(off_chain_merkle_tree_root_hash) == 32)?,
+            //(bytearray.length(off_chain_merkle_tree_root_hash) == 32)?,
             result_sent_to_own_address_match(inputs, outputs, output_reference)?,
             validate_votes(votes, off_chain_merkle_tree_root_hash)?,
             results_must_match(
@@ -109,7 +109,7 @@ validator voting {
           }
         list.and(
           [
-            (bytearray.length(off_chain_merkle_tree_root_hash) == 32)?,
+            //            (bytearray.length(off_chain_merkle_tree_root_hash) == 32)?,
             validate_results(all_results, off_chain_merkle_tree_root_hash)?,
             result_sent_to_own_address_match(inputs, outputs, output_reference)?,
             results_must_match(

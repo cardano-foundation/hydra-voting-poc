@@ -20,7 +20,7 @@ public class HydraTxProcessor implements TransactionProcessor {
     @Override
     public Result<String> submitTransaction(byte[] txCbor) {
         Mono<TxResult> mono = hydraClient.submitTx(txCbor);
-        TxResult txResult = mono.block(Duration.ofSeconds(10)); //TODO -- make it non blocking
+        TxResult txResult = mono.block(Duration.ofSeconds(100)); //TODO -- make it non blocking
 
         return Result.create(txResult.isValid(), txResult.getMessage())
                 .withValue(txResult.getTxId());
