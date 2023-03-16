@@ -5,7 +5,6 @@ import com.bloxbean.cardano.client.plutus.annotation.PlutusField;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
-import org.cardanofoundation.merkle.core.MerkleElement;
 
 @Data
 @AllArgsConstructor
@@ -14,11 +13,15 @@ import org.cardanofoundation.merkle.core.MerkleElement;
 public class CreateVoteBatchRedeemer {
 
     @PlutusField
-    private MerkleElement merkleTree;
+    private byte[] merkleTreeRootHash;
 
-    public static CreateVoteBatchRedeemer create(MerkleElement merkleTree) {
+    public static CreateVoteBatchRedeemer create(byte[] merkleTreeRootHash) {
+        if (merkleTreeRootHash.length != 32) {
+            throw new IllegalArgumentException("Doesn't seem like a valid SHA2-256 hash");
+        }
+
         try {
-            return new CreateVoteBatchRedeemer(merkleTree);
+            return new CreateVoteBatchRedeemer(merkleTreeRootHash);
         } catch (Exception e) {
             throw new RuntimeException("Create failed", e);
         }

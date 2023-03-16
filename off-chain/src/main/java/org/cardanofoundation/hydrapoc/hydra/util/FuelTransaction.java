@@ -16,7 +16,6 @@ import com.bloxbean.cardano.client.transaction.spec.Value;
 import com.bloxbean.cardano.client.util.HexUtil;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.cardanofoundation.hydrapoc.commands.PlutusScriptUtil;
 import org.cardanofoundation.hydrapoc.commands.TransactionUtil;
 import org.cardanofoundation.hydrapoc.common.OperatorAccountProvider;
 import org.springframework.stereotype.Component;
@@ -34,7 +33,6 @@ public class FuelTransaction {
     private final TransactionProcessor transactionProcessor;
     private final OperatorAccountProvider operatorAccountProvider;
     private final TransactionUtil transactionUtil;
-    private final PlutusScriptUtil plutusScriptUtil;
 
     private final String FUEL_DATA_HASH = "a654fb60d21c1fed48db2c320aa6df9737ec0204c0ba53b9b94a09fb40e757f3";
 

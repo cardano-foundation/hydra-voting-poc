@@ -13,7 +13,7 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 @Builder
 public class Vote {
-    private String voterKey;
+    private byte[] voterKey;
     private long votingPower;
     private long challenge;
     private long proposal;
