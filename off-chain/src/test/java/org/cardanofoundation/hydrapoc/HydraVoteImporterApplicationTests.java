@@ -66,7 +66,7 @@ class HydraVoteImporterApplicationTests {
     //1. Generate 150 votes
     @Test
     public void generateVotes() throws Exception {
-        command.generateVotes(10, 110, "votes.json");
+        command.generateVotes(10, 1_100, "votes.json");
         var allVotes = randomVoteGenerator.getAllVotes("votes.json");
         System.out.println("Generated unique votes count:" + allVotes.size());
     }
@@ -77,7 +77,7 @@ class HydraVoteImporterApplicationTests {
         Thread.sleep(1000); //so that all previous messages are consumed from hydra
         var allVotes = randomVoteGenerator.getAllVotes("votes.json");
 
-        var batchSize = 10;
+        var batchSize = 100;
 
         log.info("Starting import of votes, count:" + allVotes.size());
         var partitions = Lists.partition(allVotes, batchSize);

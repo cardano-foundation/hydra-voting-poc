@@ -2,6 +2,7 @@ use acca/collections/mt.{MerkleElement}
 use acca/hash.{PubKeyHash} as ahash
 use acca/validators
 use aiken/builtin
+use aiken/bytearray
 use aiken/cbor
 use aiken/dict.{Dict}
 use aiken/hash.{Hash, Sha2_256}
@@ -90,12 +91,13 @@ validator {
         list.and(
           [
             //(bytearray.length(off_chain_merkle_tree_root_hash) == 32)?,
-            // result_sent_to_own_address_match(inputs, outputs, output_reference)?,
-            // validate_votes(votes, off_chain_merkle_tree_root_hash)?,
-            results_must_match(sc.transaction.outputs, result_with_hash)?,
+            result_sent_to_own_address_match(inputs, outputs, output_reference)?,
+            // results_must_match(sc.transaction.outputs, result_with_hash)?,
+            validate_votes(votes, off_chain_merkle_tree_root_hash)?,
           ],
         )
       }
+      //results_must_match(sc.transaction.outputs, result_with_hash)?,
       ReduceResults { off_chain_merkle_tree_root_hash, iteration } -> {
         // collect results from all inputs (fail if there are still votes in smart contract)
         // take existing results and compress them, into one
@@ -119,10 +121,10 @@ validator {
             //            (bytearray.length(off_chain_merkle_tree_root_hash) == 32)?,
             validate_results(all_results, off_chain_merkle_tree_root_hash)?,
             result_sent_to_own_address_match(inputs, outputs, output_reference)?,
-            results_must_match(sc.transaction.outputs, result_with_hash)?,
           ],
         )
       }
+      //results_must_match(sc.transaction.outputs, result_with_hash)?,
       _ ->
         False
     }
@@ -137,8 +139,21 @@ fn result_sent_to_own_address_match(
   let validator_hash =
     validators.own_validator_script_address_hash(inputs, output_reference)
 
+  let script_creds =
+    list.filter(
+      outputs,
+      fn(o) {
+        when o.address.payment_credential is {
+          ScriptCredential(_) ->
+            True
+          _ ->
+            False
+        }
+      },
+    )
+
   list.any(
-    outputs,
+    script_creds,
     fn(output) {
       expect ScriptCredential(output_script_hash) =
         output.address.payment_credential
@@ -203,6 +218,16 @@ fn validate_votes(
     mt.from_list(votes, ser_fn)
   let on_chain_merkle_tree_root_hash =
     mt.element_hash(root)
+
+  trace builtin.append_string(
+    @"on_chain_hash:",
+    cbor.diagnostic(on_chain_merkle_tree_root_hash),
+  )
+
+  trace builtin.append_string(
+    @"off_chain_hash:",
+    cbor.diagnostic(off_chain_merkle_tree_root_hash),
+  )
 
   on_chain_merkle_tree_root_hash == off_chain_merkle_tree_root_hash
 }
