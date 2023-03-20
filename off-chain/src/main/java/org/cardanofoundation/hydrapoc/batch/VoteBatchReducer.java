@@ -40,6 +40,7 @@ import java.util.Optional;
 
 import static com.bloxbean.cardano.client.common.ADAConversionUtil.adaToLovelace;
 import static com.bloxbean.cardano.client.common.CardanoConstants.LOVELACE;
+import static com.bloxbean.cardano.client.transaction.spec.Language.PLUTUS_V2;
 import static org.cardanofoundation.hydrapoc.batch.util.CountVoteUtil.groupResultBatchDatum;
 import static org.cardanofoundation.merkle.util.Hashing.sha2_256;
 
@@ -129,8 +130,9 @@ public class VoteBatchReducer {
 
         txBuilder = txBuilder.andThen((context, txn) -> {
                     val txEvaluator = new TxEvaluator();
+                    val costModel = CostModelUtil.getCostModelFromProtocolParams(protocolParamsSupplier.getProtocolParams(), PLUTUS_V2).orElseThrow();
                     val costMdls = new CostMdls();
-                    costMdls.add(CostModelUtil.getCostModelFromProtocolParams(protocolParamsSupplier.getProtocolParams(), Language.PLUTUS_V2).orElseThrow());
+                    costMdls.add(costModel);
 
                     val evalReedemers = txEvaluator.evaluateTx(txn, context.getUtxos(), costMdls);
 

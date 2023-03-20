@@ -355,14 +355,14 @@
     "extraPraosEntropy": null,
     "maxBlockBodySize": 5242880,
     "maxBlockExecutionUnits": {
-        "memory": 80000000000,
-        "steps": 40000000000000
+        "memory": 80000000000000,
+        "steps": 40000000000000000
     },
-    "maxBlockHeaderSize": 1100,
+    "maxBlockHeaderSize": 1100000,
     "maxCollateralInputs": 3,
     "maxTxExecutionUnits": {
-        "memory": 16000000000,
-        "steps": 10000000000000
+        "memory": 9223372036854775806,
+        "steps": 9223372036854775806
     },
     "maxTxSize": 1048576,
     "maxValueSize": 500000,

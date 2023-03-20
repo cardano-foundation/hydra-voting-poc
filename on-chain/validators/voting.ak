@@ -2,7 +2,7 @@ use acca/collections/mt.{MerkleElement}
 use acca/hash.{PubKeyHash} as ahash
 use acca/validators
 use aiken/builtin
-use aiken/bytearray
+use aiken/cbor
 use aiken/dict.{Dict}
 use aiken/hash.{Hash, Sha2_256}
 use aiken/list
@@ -59,17 +59,26 @@ type Redeemer {
   }
 }
 
-validator voting {
-  fn(_voting_datum: VotingDatum, redeemer: Redeemer, sc: ScriptContext) -> Bool {
+validator {
+  fn voting(
+    _voting_datum: VotingDatum,
+    redeemer: Redeemer,
+    sc: ScriptContext,
+  ) -> Bool {
     // On L2 (Hydra) one will typically lock votes with 0 ADA but on L1 of course each eUTxO is guarded by ca. 1,7 ADA
-    expect Spend(output_reference) = sc.purpose
-    let inputs: List<Input> = sc.transaction.inputs
-    let outputs: List<Output> = sc.transaction.outputs
+    expect Spend(output_reference) =
+      sc.purpose
+    let inputs: List<Input> =
+      sc.transaction.inputs
+    let outputs: List<Output> =
+      sc.transaction.outputs
 
     when redeemer is {
       CreateVoteBatch { off_chain_merkle_tree_root_hash } -> {
-        let votes: List<Vote> = get_votes_from_inputs(inputs)
-        let results: Dict<ChallengeProposal, Result> = count_votes(votes)
+        let votes: List<Vote> =
+          get_votes_from_inputs(inputs)
+        let results: Dict<ChallengeProposal, Result> =
+          count_votes(votes)
         // now we need to check if any of the output UTxOs contains results
         // now we have to check if batch_id matches
         let result_with_hash =
@@ -81,12 +90,9 @@ validator voting {
         list.and(
           [
             //(bytearray.length(off_chain_merkle_tree_root_hash) == 32)?,
-            result_sent_to_own_address_match(inputs, outputs, output_reference)?,
-            validate_votes(votes, off_chain_merkle_tree_root_hash)?,
-            results_must_match(
-              outputs: sc.transaction.outputs,
-              expected_results: result_with_hash,
-            )?,
+            // result_sent_to_own_address_match(inputs, outputs, output_reference)?,
+            // validate_votes(votes, off_chain_merkle_tree_root_hash)?,
+            results_must_match(sc.transaction.outputs, result_with_hash)?,
           ],
         )
       }
@@ -94,7 +100,8 @@ validator voting {
         // collect results from all inputs (fail if there are still votes in smart contract)
         // take existing results and compress them, into one
         // check if resulting output datum contains votes counted up properly and that they send result back to the same address
-        let new_iteration = iteration + 1
+        let new_iteration =
+          iteration + 1
         let all_results: List<ResultsBatchDatum> =
           get_vote_results_from_inputs(inputs, iteration)
         let result: ResultsBatchDatum =
@@ -112,14 +119,12 @@ validator voting {
             //            (bytearray.length(off_chain_merkle_tree_root_hash) == 32)?,
             validate_results(all_results, off_chain_merkle_tree_root_hash)?,
             result_sent_to_own_address_match(inputs, outputs, output_reference)?,
-            results_must_match(
-              outputs: sc.transaction.outputs,
-              expected_results: result_with_hash,
-            )?,
+            results_must_match(sc.transaction.outputs, result_with_hash)?,
           ],
         )
       }
-      _ -> False
+      _ ->
+        False
     }
   }
 }
@@ -147,11 +152,41 @@ fn results_must_match(
   outputs: List<Output>,
   expected_results: ResultsBatchDatum,
 ) -> Bool {
+  let inline_datums =
+    list.filter(
+      outputs,
+      fn(o) {
+        when o.datum is {
+          InlineDatum(_) ->
+            True
+          _ ->
+            False
+        }
+      },
+    )
   list.any(
-    outputs,
+    inline_datums,
     fn(output) {
-      expect InlineDatum(given_results_data) = output.datum
-      expect given_results_datum: ResultsBatchDatum = given_results_data
+      trace builtin.append_string(
+        @"Entering new output:",
+        cbor.diagnostic(output),
+      )
+
+      expect InlineDatum(given_results_data) =
+        output.datum
+
+      trace builtin.append_string(
+        @"Given_results_data:",
+        cbor.diagnostic(given_results_data),
+      )
+
+      expect given_results_datum: ResultsBatchDatum =
+        given_results_data
+
+      trace builtin.append_string(
+        @"Given_results_datum:",
+        cbor.diagnostic(given_results_datum),
+      )
       expected_results == given_results_datum
     },
   )
@@ -161,10 +196,13 @@ fn validate_votes(
   votes: List<Vote>,
   off_chain_merkle_tree_root_hash: Hash<Sha2_256, Vote>,
 ) -> Bool {
-  let ser_fn = fn(v: Vote) { builtin.serialise_data(v) }
+  let ser_fn =
+    fn(v: Vote) { builtin.serialise_data(v) }
 
-  let root: MerkleElement<Vote> = mt.from_list(votes, ser_fn)
-  let on_chain_merkle_tree_root_hash = mt.element_hash(root)
+  let root: MerkleElement<Vote> =
+    mt.from_list(votes, ser_fn)
+  let on_chain_merkle_tree_root_hash =
+    mt.element_hash(root)
 
   on_chain_merkle_tree_root_hash == off_chain_merkle_tree_root_hash
 }
@@ -173,10 +211,13 @@ fn validate_results(
   results: List<ResultsBatchDatum>,
   off_chain_merkle_tree_root_hash: Hash<Sha2_256, ResultsBatchDatum>,
 ) -> Bool {
-  let ser_fn = fn(r: ResultsBatchDatum) { builtin.serialise_data(r) }
+  let ser_fn =
+    fn(r: ResultsBatchDatum) { builtin.serialise_data(r) }
 
-  let root: MerkleElement<ResultsBatchDatum> = mt.from_list(results, ser_fn)
-  let on_chain_merkle_tree_root_hash = mt.element_hash(root)
+  let root: MerkleElement<ResultsBatchDatum> =
+    mt.from_list(results, ser_fn)
+  let on_chain_merkle_tree_root_hash =
+    mt.element_hash(root)
 
   on_chain_merkle_tree_root_hash == off_chain_merkle_tree_root_hash
 }
@@ -185,8 +226,10 @@ fn get_votes_from_inputs(inputs: List<Input>) -> List<Vote> {
   list.map(
     inputs,
     fn(input) {
-      expect InlineDatum(vote_data) = input.output.datum
-      expect vote: Vote = vote_data
+      expect InlineDatum(vote_data) =
+        input.output.datum
+      expect vote: Vote =
+        vote_data
 
       vote
     },
@@ -201,8 +244,10 @@ fn get_vote_results_from_inputs(
   list.filter_map(
     inputs,
     fn(input) {
-      expect InlineDatum(vote_results_data) = input.output.datum
-      expect results_data_datum: ResultsBatchDatum = vote_results_data
+      expect InlineDatum(vote_results_data) =
+        input.output.datum
+      expect results_data_datum: ResultsBatchDatum =
+        vote_results_data
       if results_data_datum.iteration == iteration {
         Some(results_data_datum)
       } else {
@@ -216,18 +261,19 @@ fn count_vote_results(
   vote_results: List<ResultsBatchDatum>,
   new_iteration: Int,
 ) -> ResultsBatchDatum {
-  let merging_fn = fn(rd1: ResultsBatchDatum, rd2: ResultsBatchDatum) {
-    ResultsBatchDatum {
-      results: dict.union_with(
-        left: rd1.results,
-        right: rd2.results,
-        with: results_conflict_resolver,
-        compare: challenge_proposal.compare,
-      ),
-      iteration: new_iteration,
-      merkle_root_hash: #"",
+  let merging_fn =
+    fn(rd1: ResultsBatchDatum, rd2: ResultsBatchDatum) {
+      ResultsBatchDatum {
+        results: dict.union_with(
+          left: rd1.results,
+          right: rd2.results,
+          with: results_conflict_resolver,
+          compare: challenge_proposal.compare,
+        ),
+        iteration: new_iteration,
+        merkle_root_hash: #"",
+      }
     }
-  }
 
   // assign new iteration
   let zero =
@@ -245,11 +291,15 @@ fn do_count_votes(
   acc: Dict<ChallengeProposal, Result>,
 ) -> Dict<ChallengeProposal, Result> {
   when votes is {
-    [] -> acc
+    [] ->
+      acc
     [h, ..t] -> {
-      let fv: FlatVote = to_flat_vote(h)
-      let c: Challenge = h.challenge
-      let p: Proposal = h.proposal
+      let fv: FlatVote =
+        to_flat_vote(h)
+      let c: Challenge =
+        h.challenge
+      let p: Proposal =
+        h.proposal
       dict.union_with(
         left: do_count_votes(t, acc),
         right: dict.insert(
@@ -280,20 +330,22 @@ fn results_conflict_resolver(
 }
 
 fn count_votes(votes: List<Vote>) -> Dict<ChallengeProposal, Result> {
-  let empty = dict.new()
+  let empty =
+    dict.new()
   do_count_votes(votes, empty)
 }
 
 fn voting_power_for_choice(v: Vote, c: Choice) -> Option<VotingPower> {
   list.find(
     [0, 1, 2],
-    fn(choice: Choice) { list.and([(v.choice == choice)?, c == choice]) },
+    fn(choice: Choice) { list.and([v.choice == choice, c == choice]) },
   )
     |> option.map(fn(_) { v.voting_power })
 }
 
 fn to_flat_vote(v: Vote) -> FlatVote {
-  let cp = ChallengeProposal { challenge: v.challenge, proposal: v.proposal }
+  let cp =
+    ChallengeProposal { challenge: v.challenge, proposal: v.proposal }
   let y =
     voting_power_for_choice(v, 2)
       |> option.or_else(0)

@@ -1,6 +1,5 @@
 package org.cardanofoundation.hydrapoc.batch;
 
-import com.bloxbean.cardano.aiken.tx.evaluator.TxEvaluator;
 import com.bloxbean.cardano.client.api.ProtocolParamsSupplier;
 import com.bloxbean.cardano.client.api.TransactionProcessor;
 import com.bloxbean.cardano.client.api.UtxoSupplier;
@@ -14,11 +13,8 @@ import com.bloxbean.cardano.client.function.helper.ScriptCallContextProviders;
 import com.bloxbean.cardano.client.function.helper.model.ScriptCallContext;
 import com.bloxbean.cardano.client.plutus.api.PlutusObjectConverter;
 import com.bloxbean.cardano.client.plutus.impl.DefaultPlutusObjectConverter;
-import com.bloxbean.cardano.client.transaction.spec.CostMdls;
 import com.bloxbean.cardano.client.transaction.spec.ExUnits;
-import com.bloxbean.cardano.client.transaction.spec.Language;
 import com.bloxbean.cardano.client.transaction.spec.RedeemerTag;
-import com.bloxbean.cardano.client.transaction.util.CostModelUtil;
 import com.bloxbean.cardano.client.util.JsonUtil;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -38,11 +34,11 @@ import org.springframework.stereotype.Component;
 
 import java.math.BigInteger;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.Optional;
 
 import static com.bloxbean.cardano.client.common.ADAConversionUtil.adaToLovelace;
 import static com.bloxbean.cardano.client.common.CardanoConstants.LOVELACE;
+import static java.util.Collections.emptySet;
 import static org.cardanofoundation.merkle.util.Hashing.sha2_256;
 
 @Component
@@ -65,7 +61,7 @@ public class VoteBatcher {
             maxAttempts = 3,
             backoff = @Backoff(delay = 100))
     public Optional<String> createAndPostBatchTransaction(int batchSize) throws Exception {
-        val voteBatcherScript = plutusScriptUtil.getVoteBatcherContract();
+        val voteBatcherContract = plutusScriptUtil.getVoteBatcherContract();
         val voteBatcherScriptAddress = plutusScriptUtil.getVoteBatcherContractAddress();
         val sender = operatorAccountProvider.getOperatorAddress();
 
@@ -118,7 +114,7 @@ public class VoteBatcher {
 
         // Build and post contract txn
         val utxoSelectionStrategy = new LargestFirstUtxoSelectionStrategy(utxoSupplier);
-        val collateralUtxos = utxoSelectionStrategy.select(sender, new Amount(LOVELACE, adaToLovelace(1)), Collections.emptySet());
+        val collateralUtxos = utxoSelectionStrategy.select(sender, new Amount(LOVELACE, adaToLovelace(1)), emptySet());
 
         // Build the expected output
         val outputDatum = plutusObjectConverter.toPlutusData(resultBatchDatum);
@@ -135,12 +131,13 @@ public class VoteBatcher {
 
         val scriptCallContexts = scriptUtxos.stream().map(utxo -> ScriptCallContext
                 .builder()
-                .script(voteBatcherScript)
+                .script(voteBatcherContract)
                 .utxo(utxo)
                 .exUnits(ExUnits.builder()  // Exact exUnits will be calculated later
                         .mem(BigInteger.valueOf(0))
                         .steps(BigInteger.valueOf(0))
-                        .build())
+                        .build()
+                )
 
                 .redeemer(plutusObjectConverter.toPlutusData(CreateVoteBatchRedeemer.create(merkleTreeRootHash)))
                 .redeemerTag(RedeemerTag.Spend).build())
@@ -155,21 +152,24 @@ public class VoteBatcher {
         }
 
         txBuilder = txBuilder.andThen((context, txn) -> {
-            val txEvaluator = new TxEvaluator();
-            val costMdls = new CostMdls();
-            costMdls.add(CostModelUtil.getCostModelFromProtocolParams(protocolParamsSupplier.getProtocolParams(), Language.PLUTUS_V2).orElseThrow());
-            val evalReedemers = txEvaluator.evaluateTx(txn, context.getUtxos(), costMdls);
+            val protocolParams = protocolParamsSupplier.getProtocolParams();
+            val utxos = context.getUtxos();
+
+            val evalReedemers = PlutusScriptUtil.evaluateExUnits(txn, utxos, protocolParams);
 
             val redeemers = txn.getWitnessSet().getRedeemers();
             for (val redeemer : redeemers) { //Update costs
                 evalReedemers.stream().filter(evalReedemer -> evalReedemer.getIndex().equals(redeemer.getIndex()))
                         .findFirst()
-                        .ifPresent(evalRedeemer -> redeemer.setExUnits(evalRedeemer.getExUnits()));
+                        .ifPresent(evalRedeemer -> {
+                            System.out.println("ExUnits:" + evalRedeemer.getExUnits());
+                            redeemer.setExUnits(evalRedeemer.getExUnits());
+                        });
             }
 
             // Remove all scripts from witness and just add one
             txn.getWitnessSet().getPlutusV2Scripts().clear();
-            txn.getWitnessSet().getPlutusV2Scripts().add(plutusScriptUtil.getVoteBatcherContract());
+            txn.getWitnessSet().getPlutusV2Scripts().add(voteBatcherContract);
         })
         .andThen(BalanceUtil.balanceTx(sender, 1));
 

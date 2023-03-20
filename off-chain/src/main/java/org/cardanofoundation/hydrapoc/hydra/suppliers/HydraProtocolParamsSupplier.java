@@ -17,7 +17,9 @@ import java.util.Map;
 @Component
 @ConditionalOnProperty(prefix = "hydra", name = "ws.url")
 public class HydraProtocolParamsSupplier implements ProtocolParamsSupplier {
+
     private final ObjectMapper mapper = new ObjectMapper();
+
     private JsonNode protoParamsJson;
 
     public HydraProtocolParamsSupplier() {
@@ -37,6 +39,8 @@ public class HydraProtocolParamsSupplier implements ProtocolParamsSupplier {
         protocolParams.setMinFeeB(155381);
         protocolParams.setPriceMem(new BigDecimal(protoParamsJson.get("executionUnitPrices").get("priceMemory").asText()));
         protocolParams.setPriceStep(new BigDecimal(protoParamsJson.get("executionUnitPrices").get("priceSteps").asText()));
+        protocolParams.setMaxTxExMem(protoParamsJson.get("maxTxExecutionUnits").get("memory").asText());
+        protocolParams.setMaxTxExSteps(protoParamsJson.get("maxTxExecutionUnits").get("steps").asText());
 
         Map<String, Long> costModel1 = costModelFor("PlutusScriptV1");
         Map<String, Long> costModel2 = costModelFor("PlutusScriptV2");
