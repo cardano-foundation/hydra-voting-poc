@@ -28,7 +28,7 @@ import org.cardanofoundation.hydrapoc.commands.PlutusScriptUtil;
 import org.cardanofoundation.hydrapoc.commands.TransactionUtil;
 import org.cardanofoundation.hydrapoc.common.BalanceUtil;
 import org.cardanofoundation.hydrapoc.common.OperatorAccountProvider;
-import org.cardanofoundation.merkle.core.MerkleTree;
+import org.cardanofoundation.list.HashedList;
 import org.springframework.retry.annotation.Backoff;
 import org.springframework.retry.annotation.Retryable;
 import org.springframework.stereotype.Component;
@@ -40,7 +40,7 @@ import java.util.Optional;
 import static com.bloxbean.cardano.client.common.ADAConversionUtil.adaToLovelace;
 import static com.bloxbean.cardano.client.common.CardanoConstants.LOVELACE;
 import static java.util.Collections.emptySet;
-import static org.cardanofoundation.merkle.util.Hashing.sha2_256;
+import static org.cardanofoundation.util.Hashing.sha2_256;
 
 @Component
 @RequiredArgsConstructor
@@ -104,8 +104,8 @@ public class VoteBatcher {
                     log.warn("Invalid vote, " + voteDatum.getChoice());
             }
         }
-        val mt = MerkleTree.createFromItems(voteDatums, vote -> sha2_256(plutusObjectConverter.toPlutusData(vote).serializeToBytes()));
-        val merkleTreeRootHash = mt.elementHash();
+        val hashedList = HashedList.create(voteDatums, vote -> sha2_256(plutusObjectConverter.toPlutusData(vote).serializeToBytes()));
+        val merkleTreeRootHash = hashedList.getHash();
         resultBatchDatum.setMerkleRootHash(merkleTreeRootHash);
         log.info("merkle_root:" + HexUtil.encodeHexString(merkleTreeRootHash).toUpperCase());
 

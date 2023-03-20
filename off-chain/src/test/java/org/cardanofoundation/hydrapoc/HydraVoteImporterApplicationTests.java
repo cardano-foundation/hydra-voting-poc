@@ -66,7 +66,7 @@ class HydraVoteImporterApplicationTests {
     //1. Generate 150 votes
     @Test
     public void generateVotes() throws Exception {
-        command.generateVotes(10, 1_100, "votes.json");
+        command.generateVotes(10, 110, "votes.json");
         var allVotes = randomVoteGenerator.getAllVotes("votes.json");
         System.out.println("Generated unique votes count:" + allVotes.size());
     }

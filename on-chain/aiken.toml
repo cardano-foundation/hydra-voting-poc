@@ -4,5 +4,5 @@ licences = []
 description = "Hydra Voting PoC"
 
 dependencies = [
-  { name = "Cardano-Fans/acca", version = "7b022a1931f738eaf8f6cd82ff7cd5022849402f", source = "github" }
+  { name = "Cardano-Fans/acca", version = "547d9f2381634ef40cb138455a9bcacb31bd829f", source = "github" }
 ]

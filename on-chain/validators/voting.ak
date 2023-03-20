@@ -1,8 +1,7 @@
-use acca/collections/mt.{MerkleElement}
+use acca/collections/hashed_list
 use acca/hash.{PubKeyHash} as ahash
 use acca/validators
 use aiken/builtin
-use aiken/bytearray
 use aiken/cbor
 use aiken/dict.{Dict}
 use aiken/hash.{Hash, Sha2_256}
@@ -78,16 +77,16 @@ validator {
       CreateVoteBatch { off_chain_merkle_tree_root_hash } -> {
         let votes: List<Vote> =
           get_votes_from_inputs(inputs)
-        let results: Dict<ChallengeProposal, Result> =
-          count_votes(votes)
+        // let results: Dict<ChallengeProposal, Result> =
+        //   count_votes(votes)
         // now we need to check if any of the output UTxOs contains results
         // now we have to check if batch_id matches
-        let result_with_hash =
-          ResultsBatchDatum {
-            results,
-            iteration: 0,
-            merkle_root_hash: off_chain_merkle_tree_root_hash,
-          }
+        // let result_with_hash =
+        //   ResultsBatchDatum {
+        //     results,
+        //     iteration: 0,
+        //     merkle_root_hash: off_chain_merkle_tree_root_hash,
+        //   }
         list.and(
           [
             //(bytearray.length(off_chain_merkle_tree_root_hash) == 32)?,
@@ -102,20 +101,20 @@ validator {
         // collect results from all inputs (fail if there are still votes in smart contract)
         // take existing results and compress them, into one
         // check if resulting output datum contains votes counted up properly and that they send result back to the same address
-        let new_iteration =
-          iteration + 1
+        // let new_iteration =
+        //   iteration + 1
         let all_results: List<ResultsBatchDatum> =
           get_vote_results_from_inputs(inputs, iteration)
-        let result: ResultsBatchDatum =
-          count_vote_results(
-            vote_results: all_results,
-            new_iteration: new_iteration,
-          )
-        let result_with_hash =
-          ResultsBatchDatum {
-            ..result,
-            merkle_root_hash: off_chain_merkle_tree_root_hash,
-          }
+        // let result: ResultsBatchDatum =
+        //   count_vote_results(
+        //     vote_results: all_results,
+        //     new_iteration: new_iteration,
+        //   )
+        // let result_with_hash =
+        //   ResultsBatchDatum {
+        //     ..result,
+        //     merkle_root_hash: off_chain_merkle_tree_root_hash,
+        //   }
         list.and(
           [
             //            (bytearray.length(off_chain_merkle_tree_root_hash) == 32)?,
@@ -214,10 +213,11 @@ fn validate_votes(
   let ser_fn =
     fn(v: Vote) { builtin.serialise_data(v) }
 
-  let root: MerkleElement<Vote> =
-    mt.from_list(votes, ser_fn)
+  let hashed_list =
+    hashed_list.from(votes, ser_fn)
+
   let on_chain_merkle_tree_root_hash =
-    mt.element_hash(root)
+    hashed_list.hash
 
   trace builtin.append_string(
     @"on_chain_hash:",
@@ -239,10 +239,11 @@ fn validate_results(
   let ser_fn =
     fn(r: ResultsBatchDatum) { builtin.serialise_data(r) }
 
-  let root: MerkleElement<ResultsBatchDatum> =
-    mt.from_list(results, ser_fn)
+  let hashed_list =
+    hashed_list.from(results, ser_fn)
+
   let on_chain_merkle_tree_root_hash =
-    mt.element_hash(root)
+    hashed_list.hash
 
   on_chain_merkle_tree_root_hash == off_chain_merkle_tree_root_hash
 }
