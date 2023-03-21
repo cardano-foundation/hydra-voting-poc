@@ -3,7 +3,7 @@ use acca/validators
 use aiken/builtin.{append_string}
 use aiken/cbor
 use aiken/dict.{Dict}
-use aiken/hash.{Hash, Sha2_256}
+use aiken/hash.{Hash, Sha2_256, sha2_256}
 use aiken/list
 use aiken/option
 use aiken/string
@@ -60,8 +60,8 @@ validator {
         list.and(
           [
             //(bytearray.length(off_chain_merkle_tree_root_hash) == 32)?,
-            //result_sent_to_own_address_match(inputs, outputs, output_reference)?,
-            // results_must_match(sc.transaction.outputs, result_with_hash)?,
+            result_sent_to_own_address_match(inputs, outputs, output_reference)?,
+            // results_must_match(sc.transaction.outputs, result_with_hash)?,qq
             validate_votes(votes, off_chain_merkle_tree_root_hash)?,
           ],
         )
@@ -151,26 +151,25 @@ fn results_must_match(
   list.any(
     inline_datums,
     fn(output) {
-      trace builtin.append_string(
-        @"Entering new output:",
-        cbor.diagnostic(output),
-      )
+      // trace builtin.append_string(
+      //   @"Entering new output:",
+      //   cbor.diagnostic(output),
+      // )
 
       expect InlineDatum(given_results_data) =
         output.datum
 
-      trace builtin.append_string(
-        @"Given_results_data:",
-        cbor.diagnostic(given_results_data),
-      )
-
+      // trace builtin.append_string(
+      //   @"Given_results_data:",
+      //   cbor.diagnostic(given_results_data),
+      // )
       expect given_results_datum: ResultsBatchDatum =
         given_results_data
 
-      trace builtin.append_string(
-        @"Given_results_datum:",
-        cbor.diagnostic(given_results_datum),
-      )
+      // trace builtin.append_string(
+      //   @"Given_results_datum:",
+      //   cbor.diagnostic(given_results_datum),
+      // )
       expected_results == given_results_datum
     },
   )
@@ -180,11 +179,11 @@ fn validate_votes(
   votes: List<Vote>,
   off_chain_merkle_tree_root_hash: Hash<Sha2_256, Vote>,
 ) -> Bool {
-  let ser_fn =
-    fn(v: Vote) { builtin.serialise_data(v) }
+  let hash_fn =
+    fn(v: Vote) { sha2_256(builtin.serialise_data(v)) }
 
   let hashed_list =
-    hashed_list.from(votes, ser_fn)
+    hashed_list.from(votes, hash_fn)
 
   let on_chain_merkle_tree_root_hash =
     hashed_list.hash
@@ -206,11 +205,11 @@ fn validate_results(
   results: List<ResultsBatchDatum>,
   off_chain_merkle_tree_root_hash: Hash<Sha2_256, ResultsBatchDatum>,
 ) -> Bool {
-  let ser_fn =
-    fn(r: ResultsBatchDatum) { builtin.serialise_data(r) }
+  let hash_fn =
+    fn(r: ResultsBatchDatum) { sha2_256(builtin.serialise_data(r)) }
 
   let hashed_list =
-    hashed_list.from(results, ser_fn)
+    hashed_list.from(results, hash_fn)
 
   let on_chain_merkle_tree_root_hash =
     hashed_list.hash

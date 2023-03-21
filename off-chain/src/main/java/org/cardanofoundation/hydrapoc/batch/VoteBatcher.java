@@ -164,7 +164,6 @@ public class VoteBatcher {
                 evalReedemers.stream().filter(evalReedemer -> evalReedemer.getIndex().equals(redeemer.getIndex()))
                         .findFirst()
                         .ifPresent(evalRedeemer -> {
-                            System.out.println("ExUnits:" + evalRedeemer.getExUnits());
                             redeemer.setExUnits(evalRedeemer.getExUnits());
                         });
             }

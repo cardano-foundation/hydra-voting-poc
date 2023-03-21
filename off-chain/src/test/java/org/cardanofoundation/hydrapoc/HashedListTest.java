@@ -23,71 +23,84 @@ public class HashedListTest {
 
     private final String votesJson = """
             [ {
-                    "voterKey" : "E9Y8mwRHjS/D4PlVP3kJSoMRHjrQPz93n1umpvN6xkc=",
-                    "votingPower" : 5540767,
-                    "challenge" : 258650178,
-                    "proposal" : 2888851,
-                    "choice" : 0
-                    }, {
-                    "voterKey" : "to6/Ff1uR99D+iwRwnNaTl41nPOvmvuTtfcy/5vvLB8=",
-                    "votingPower" : 2604515,
-                    "challenge" : 374145371,
-                    "proposal" : 2675120,
-                    "choice" : 0
-                    }, {
-                    "voterKey" : "Qbs5tHLTh1tud9ooQXguZe/7+FRHmCzRUpfrwoo0iAk=",
-                    "votingPower" : 253840,
-                    "challenge" : 72140352,
-                    "proposal" : 3057554,
-                    "choice" : 0
-                    }, {
-                    "voterKey" : "4ECxMuNvribHsNcnwuhZuFrla3FpsA4ATz0nzQ4/0/4=",
-                    "votingPower" : 4654383,
-                    "challenge" : 59549376,
-                    "proposal" : 3637300,
-                    "choice" : 1
-                    }, {
-                    "voterKey" : "GwJvm5sNFy38L6SkUFaf6M8QqDzithbrHc1feG6hmbA=",
-                    "votingPower" : 3353282,
-                    "challenge" : 214998680,
-                    "proposal" : 4269173,
-                    "choice" : 1
-                    }, {
-                    "voterKey" : "6I4lNR86I+vKHkyt92Cbagh/YdUlL4cK9d73V44btU4=",
-                    "votingPower" : 4620080,
-                    "challenge" : 116457209,
-                    "proposal" : 617559,
-                    "choice" : 2
-                    }, {
-                    "voterKey" : "E9Y8mwRHjS/D4PlVP3kJSoMRHjrQPz93n1umpvN6xkc=",
-                    "votingPower" : 5540767,
-                    "challenge" : 214998680,
-                    "proposal" : 1123389,
-                    "choice" : 0
-                    }, {
-                    "voterKey" : "bPbxSoMUXuRHwWXeW09Sn2a9VSKyaqjAOONS7QtqQbw=",
-                    "votingPower" : 881560,
-                    "challenge" : 258650178,
-                    "proposal" : 442754,
-                    "choice" : 2
-                    }, {
-                    "voterKey" : "to6/Ff1uR99D+iwRwnNaTl41nPOvmvuTtfcy/5vvLB8=",
-                    "votingPower" : 2604515,
-                    "challenge" : 72140352,
-                    "proposal" : 5776693,
-                    "choice" : 2
-                    }, {
-                    "voterKey" : "6I4lNR86I+vKHkyt92Cbagh/YdUlL4cK9d73V44btU4=",
-                    "votingPower" : 4620080,
-                    "challenge" : 59549376,
-                    "proposal" : 1247152,
-                    "choice" : 1
-                    } ]
+              "voterKey" : "GwJvm5sNFy38L6SkUFaf6M8QqDzithbrHc1feG6hmbA=",
+              "votingPower" : 3353282,
+              "challenge" : 449181773,
+              "proposal" : 2365581,
+              "choice" : 0
+            }, {
+              "voterKey" : "QZBkg0M2NoFcz0E1eqLNGs94/xEVn3KppbCBn7IjQUw=",
+              "votingPower" : 5215698,
+              "challenge" : 449181773,
+              "proposal" : 1932430,
+              "choice" : 0
+            }, {
+              "voterKey" : "4ECxMuNvribHsNcnwuhZuFrla3FpsA4ATz0nzQ4/0/4=",
+              "votingPower" : 4654383,
+              "challenge" : 303167468,
+              "proposal" : 4988558,
+              "choice" : 2
+            }, {
+              "voterKey" : "Qbs5tHLTh1tud9ooQXguZe/7+FRHmCzRUpfrwoo0iAk=",
+              "votingPower" : 253840,
+              "challenge" : 116457209,
+              "proposal" : 2297573,
+              "choice" : 2
+            }, {
+              "voterKey" : "Qbs5tHLTh1tud9ooQXguZe/7+FRHmCzRUpfrwoo0iAk=",
+              "votingPower" : 253840,
+              "challenge" : 131249474,
+              "proposal" : 588916,
+              "choice" : 2
+            }, {
+              "voterKey" : "Qbs5tHLTh1tud9ooQXguZe/7+FRHmCzRUpfrwoo0iAk=",
+              "votingPower" : 253840,
+              "challenge" : 303167468,
+              "proposal" : 3301549,
+              "choice" : 1
+            }, {
+              "voterKey" : "GwJvm5sNFy38L6SkUFaf6M8QqDzithbrHc1feG6hmbA=",
+              "votingPower" : 3353282,
+              "challenge" : 374145371,
+              "proposal" : 5342861,
+              "choice" : 0
+            }, {
+              "voterKey" : "4ECxMuNvribHsNcnwuhZuFrla3FpsA4ATz0nzQ4/0/4=",
+              "votingPower" : 4654383,
+              "challenge" : 214998680,
+              "proposal" : 226531,
+              "choice" : 0
+            }, {
+              "voterKey" : "Qbs5tHLTh1tud9ooQXguZe/7+FRHmCzRUpfrwoo0iAk=",
+              "votingPower" : 253840,
+              "challenge" : 51052969,
+              "proposal" : 3531179,
+              "choice" : 2
+            }, {
+              "voterKey" : "6I4lNR86I+vKHkyt92Cbagh/YdUlL4cK9d73V44btU4=",
+              "votingPower" : 4620080,
+              "challenge" : 282723914,
+              "proposal" : 5558632,
+              "choice" : 1
+            } ]
             """;
 
     @Test
     public void test_001() throws JsonProcessingException {
         val items = objectMapper.readValue(votesJson, new TypeReference<List<VoteDatum>>() {});
+
+        for (int i = 0; i< items.size(); i++) {
+            val voteDatum = items.get(i);
+            System.out.println(String.format("""
+             let v%d = Vote(
+                            #"%s",
+                            %d,
+                            %d,
+                            %d,
+                            0,
+                            )
+                    """, i, encodeHexString(voteDatum.getVoterKey()), voteDatum.getVotingPower(), voteDatum.getChallenge(), voteDatum.getProposal(), voteDatum.getChoice()));
+        }
 
         val hashedList = HashedList.create(items, (v) -> sha2_256(PLUTUS_OBJECT_CONVERTER.toPlutusData(v).serializeToBytes()));
 
