@@ -1,5 +1,4 @@
 use acca/collections/hashed_list
-use acca/hash.{PubKeyHash} as ahash
 use acca/validators
 use aiken/builtin.{append_string}
 use aiken/cbor
@@ -13,42 +12,8 @@ use aiken/transaction.{
 }
 use aiken/transaction/credential.{ScriptCredential}
 use voting/challenge_proposal.{Challenge, ChallengeProposal, Proposal}
-
-type VotingPower =
-  Int
-
-type Choice =
-  Int
-
-type Vote {
-  voter_key: PubKeyHash,
-  voting_power: VotingPower,
-  challenge: Challenge,
-  proposal: Proposal,
-  choice: Choice,
-}
-
-type FlatVote {
-  key: ChallengeProposal,
-  yes: VotingPower,
-  no: VotingPower,
-  abstain: VotingPower,
-}
-
-type Result {
-  yes: VotingPower,
-  no: VotingPower,
-  abstain: VotingPower,
-}
-
-// respective pubkey hashes for authorised parties
-type VotingDatum {
-}
-
-type ResultsBatchDatum {
-  results: Dict<ChallengeProposal, Result>,
-  merkle_root_hash: ByteArray,
-  iteration: Int,
+use voting/datums.{
+  Choice, FlatVote, Result, ResultsBatchDatum, Vote, VotingDatum, VotingPower,
 }
 
 type Redeemer {
