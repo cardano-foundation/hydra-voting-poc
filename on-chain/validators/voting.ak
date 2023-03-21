@@ -1,12 +1,13 @@
 use acca/collections/hashed_list
 use acca/hash.{PubKeyHash} as ahash
 use acca/validators
-use aiken/builtin
+use aiken/builtin.{append_string}
 use aiken/cbor
 use aiken/dict.{Dict}
 use aiken/hash.{Hash, Sha2_256}
 use aiken/list
 use aiken/option
+use aiken/string
 use aiken/transaction.{
   InlineDatum, Input, Output, OutputReference, ScriptContext, Spend,
 }
@@ -77,6 +78,10 @@ validator {
       CreateVoteBatch { off_chain_merkle_tree_root_hash } -> {
         let votes: List<Vote> =
           get_votes_from_inputs(inputs)
+        trace append_string(
+          @"votes_count:",
+          string.from_int(list.length(votes)),
+        )
         // let results: Dict<ChallengeProposal, Result> =
         //   count_votes(votes)
         // now we need to check if any of the output UTxOs contains results
@@ -90,7 +95,7 @@ validator {
         list.and(
           [
             //(bytearray.length(off_chain_merkle_tree_root_hash) == 32)?,
-            result_sent_to_own_address_match(inputs, outputs, output_reference)?,
+            //result_sent_to_own_address_match(inputs, outputs, output_reference)?,
             // results_must_match(sc.transaction.outputs, result_with_hash)?,
             validate_votes(votes, off_chain_merkle_tree_root_hash)?,
           ],

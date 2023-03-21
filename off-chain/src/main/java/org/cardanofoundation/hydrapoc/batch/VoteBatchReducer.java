@@ -79,7 +79,7 @@ public class VoteBatchReducer {
         val mt = HashedList.create(results, r -> {
             return sha2_256(plutusObjectConverter.toPlutusData(r).serializeToBytes());
         });
-        val merkleTreeRootHash = mt.getHash();
+        val merkleTreeRootHash = mt.hash();
 
         // Calculate group result batch datum
         val reduceVoteBatchDatum = groupResultBatchDatum(results, fromIteration + 1);

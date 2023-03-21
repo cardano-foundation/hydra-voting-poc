@@ -105,7 +105,7 @@ public class VoteBatcher {
             }
         }
         val hashedList = HashedList.create(voteDatums, vote -> sha2_256(plutusObjectConverter.toPlutusData(vote).serializeToBytes()));
-        val merkleTreeRootHash = hashedList.getHash();
+        val merkleTreeRootHash = hashedList.hash();
         resultBatchDatum.setMerkleRootHash(merkleTreeRootHash);
         log.info("merkle_root:" + HexUtil.encodeHexString(merkleTreeRootHash).toUpperCase());
 
