@@ -87,33 +87,10 @@ public class HashedListTest {
 
     @Test
     public void test_001() throws JsonProcessingException {
-        val temp_items = objectMapper.readValue(votesJson, new TypeReference<List<VoteDatum>>() {});
-
-        val items = List.of(
-                temp_items.get(0),
-                temp_items.get(1),
-                temp_items.get(2),
-                temp_items.get(9)
-//                temp_items.get(3),
-//                temp_items.get(4),
-//                temp_items.get(5)
-        );
-
-        //items.stream().map(voteDatum -> encodeHexString(voteDatum.getVoterKey())).forEach(System.out::println);
-
-//        items.forEach(voteDatum -> {
-//            System.out.println(String.format("""
-//                    Vote(
-//                            #"%s",
-//                            %d,
-//                            %d,
-//                            %d,
-//                            0,
-//                            )
-//                    """, encodeHexString(voteDatum.getVoterKey()), voteDatum.getVotingPower(), voteDatum.getChallenge(), voteDatum.getProposal(), voteDatum.getChoice()));
-//        });
+        val items = objectMapper.readValue(votesJson, new TypeReference<List<VoteDatum>>() {});
 
         val hashedList = HashedList.create(items, (v) -> sha2_256(PLUTUS_OBJECT_CONVERTER.toPlutusData(v).serializeToBytes()));
+
         System.out.println(encodeHexString(hashedList.hash()));
     }
 
