@@ -1,16 +1,14 @@
 use acca/collections/hashed_list
 use acca/validators
 use aiken/builtin.{append_string}
+use aiken/bytearray
 use aiken/cbor
 use aiken/dict.{Dict}
 use aiken/hash.{Hash, Sha2_256, sha2_256}
 use aiken/list
 use aiken/option
 use aiken/string
-use aiken/transaction.{
-  InlineDatum, Input, Output, OutputReference, ScriptContext, Spend,
-}
-use aiken/transaction/credential.{ScriptCredential}
+use aiken/transaction.{InlineDatum, Input, Output, ScriptContext, Spend}
 use voting/challenge_proposal.{Challenge, ChallengeProposal, Proposal}
 use voting/datums.{
   Choice, FlatVote, Result, ResultsBatchDatum, Vote, VotingDatum, VotingPower,
@@ -52,13 +50,17 @@ validator {
           ResultsBatchDatum { results, iteration: 0, batch_hash }
         list.and(
           [
-            //(bytearray.length(batch_hash) == 32)?,
-            //results_must_match(sc.transaction.outputs, result_with_hash)?,
-            //result_sent_to_own_address_match(inputs, outputs, output_reference)?,
-            validate_votes(votes, batch_hash)?,
+            (bytearray.length(batch_hash) == 32)?,
+            results_must_match(sc.transaction.outputs, result_with_hash)?,
+            validators.any_output_contains_own_validator_address(
+              inputs,
+              outputs,
+              output_reference,
+            )?,
           ],
         )
       }
+      //validate_votes(votes, batch_hash)?,
       ReduceResults { batch_hash, iteration } -> {
         // collect results from all inputs (fail if there are still votes in smart contract)
         // take existing results and compress them, into one
@@ -76,8 +78,12 @@ validator {
           ResultsBatchDatum { ..result, batch_hash: batch_hash }
         list.and(
           [
-            result_sent_to_own_address_match(inputs, outputs, output_reference)?,
-            validate_results(all_results, batch_hash)?,
+            validators.any_output_contains_own_validator_address(
+              inputs,
+              outputs,
+              output_reference,
+            )?,
+            //validate_results(all_results, batch_hash)?,
             results_must_match(
               outputs: sc.transaction.outputs,
               expected_results: result_with_hash,
@@ -91,42 +97,12 @@ validator {
   }
 }
 
-fn result_sent_to_own_address_match(
-  inputs: List<Input>,
-  outputs: List<Output>,
-  output_reference: OutputReference,
-) {
-  let validator_hash =
-    validators.own_validator_script_address_hash(inputs, output_reference)
-
-  let script_creds =
-    list.filter(
-      outputs,
-      fn(o) {
-        when o.address.payment_credential is {
-          ScriptCredential(_) ->
-            True
-          _ ->
-            False
-        }
-      },
-    )
-
-  list.any(
-    script_creds,
-    fn(output) {
-      expect ScriptCredential(output_script_hash) =
-        output.address.payment_credential
-
-      output_script_hash == validator_hash
-    },
-  )
-}
-
 fn results_must_match(
   outputs: List<Output>,
   expected_results: ResultsBatchDatum,
 ) -> Bool {
+  trace append_string(@"OutputsCount:", string.from_int(list.length(outputs)))
+
   let inline_datums =
     list.filter(
       outputs,
@@ -139,14 +115,19 @@ fn results_must_match(
         }
       },
     )
-  list.any(
-    inline_datums,
-    fn(output) {
+
+  trace append_string(@"inline_datums:", string.from_int(list.length(outputs)))
+
+  list.any(inline_datums, fn(output) { trace @"Before InlineDatum expect."
+
       expect InlineDatum(given_results_data) =
         output.datum
 
+      trace @"After InlineDatum expect."
       expect given_results_datum: ResultsBatchDatum =
         given_results_data
+
+      trace @"After ResultsBatchDatum cast."
 
       trace append_string(
         @"given_results_datum:",
@@ -157,9 +138,7 @@ fn results_must_match(
         @"expected_results:",
         cbor.diagnostic(expected_results),
       )
-      expected_results == given_results_datum
-    },
-  )
+      expected_results == given_results_datum })
 }
 
 fn validate_votes(votes: List<Vote>, batch_hash: Hash<Sha2_256, Vote>) -> Bool {

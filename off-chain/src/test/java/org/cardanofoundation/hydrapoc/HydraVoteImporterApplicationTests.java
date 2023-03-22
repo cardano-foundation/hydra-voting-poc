@@ -74,7 +74,7 @@ class HydraVoteImporterApplicationTests {
     //2. Import 20 votes from votes.json to script address
     @Test
     public void importVotesFromFile() throws Exception {
-        Thread.sleep(1000); //so that all previous messages are consumed from hydra
+        //Thread.sleep(1000); //so that all previous messages are consumed from hydra
         var allVotes = randomVoteGenerator.getAllVotes("votes.json");
 
         var batchSize = 10;
@@ -98,7 +98,7 @@ class HydraVoteImporterApplicationTests {
     //Run this test multiple times to create multiple batches
     @Test
     public void createAndPostBatch() throws Exception {
-        Thread.sleep(5000);
+        //Thread.sleep(5000);
         var allVotes = randomVoteGenerator.getAllVotes("votes.json");
         var batchSize = 3;
         var partitions = Lists.partition(allVotes, batchSize);
@@ -107,7 +107,7 @@ class HydraVoteImporterApplicationTests {
 
         for (var votesPart : partitions) {
             if (votesPart.size() == batchSize) {
-                Thread.sleep(1000);
+                //Thread.sleep(1000);
                 voteBatcher.createAndPostBatchTransaction(batchSize);
             }
         }
