@@ -3,11 +3,11 @@
 
 [[requirements]]
 name = "Cardano-Fans/acca"
-version = "7fa74a150150920efa4f8e23f7f80715ef071b3a"
+version = "13507df26bc8af617e81c45baf4331e88ccbaf32"
 source = "github"
 
 [[packages]]
 name = "Cardano-Fans/acca"
-version = "7fa74a150150920efa4f8e23f7f80715ef071b3a"
+version = "13507df26bc8af617e81c45baf4331e88ccbaf32"
 requirements = []
 source = "github"
