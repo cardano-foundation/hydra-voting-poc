@@ -23,65 +23,23 @@ public class HashedListTest {
 
     private final String votesJson = """
 [ {
-  "voterKey" : "GwJvm5sNFy38L6SkUFaf6M8QqDzithbrHc1feG6hmbA=",
-  "votingPower" : 3353282,
-  "challenge" : 449181773,
-  "proposal" : 2365581,
-  "choice" : 0
-}, {
-  "voterKey" : "QZBkg0M2NoFcz0E1eqLNGs94/xEVn3KppbCBn7IjQUw=",
-  "votingPower" : 5215698,
-  "challenge" : 449181773,
-  "proposal" : 1932430,
-  "choice" : 0
-}, {
-  "voterKey" : "4ECxMuNvribHsNcnwuhZuFrla3FpsA4ATz0nzQ4/0/4=",
-  "votingPower" : 4654383,
-  "challenge" : 303167468,
-  "proposal" : 4988558,
-  "choice" : 2
-}, {
-  "voterKey" : "Qbs5tHLTh1tud9ooQXguZe/7+FRHmCzRUpfrwoo0iAk=",
-  "votingPower" : 253840,
-  "challenge" : 116457209,
-  "proposal" : 2297573,
-  "choice" : 2
-}, {
-  "voterKey" : "Qbs5tHLTh1tud9ooQXguZe/7+FRHmCzRUpfrwoo0iAk=",
-  "votingPower" : 253840,
-  "challenge" : 131249474,
-  "proposal" : 588916,
-  "choice" : 2
-}, {
-  "voterKey" : "Qbs5tHLTh1tud9ooQXguZe/7+FRHmCzRUpfrwoo0iAk=",
-  "votingPower" : 253840,
-  "challenge" : 303167468,
-  "proposal" : 3301549,
+  "voterKey" : "aPt032SvG7RVntWx93dRWtmyWZI/oWGPNUmSusEv0Uo=",
+  "votingPower" : 9631517,
+  "challenge" : 192691745,
+  "proposal" : 1426925,
   "choice" : 1
 }, {
-  "voterKey" : "GwJvm5sNFy38L6SkUFaf6M8QqDzithbrHc1feG6hmbA=",
-  "votingPower" : 3353282,
-  "challenge" : 374145371,
-  "proposal" : 5342861,
-  "choice" : 0
-}, {
-  "voterKey" : "4ECxMuNvribHsNcnwuhZuFrla3FpsA4ATz0nzQ4/0/4=",
-  "votingPower" : 4654383,
-  "challenge" : 214998680,
-  "proposal" : 226531,
-  "choice" : 0
-}, {
-  "voterKey" : "Qbs5tHLTh1tud9ooQXguZe/7+FRHmCzRUpfrwoo0iAk=",
-  "votingPower" : 253840,
-  "challenge" : 51052969,
-  "proposal" : 3531179,
+  "voterKey" : "glTMowNHBiR1sos2adoqXkuTwWTtgdU0HPIp9rbwkWg=",
+  "votingPower" : 1418415,
+  "challenge" : 422503982,
+  "proposal" : 5026403,
   "choice" : 2
 }, {
-  "voterKey" : "6I4lNR86I+vKHkyt92Cbagh/YdUlL4cK9d73V44btU4=",
-  "votingPower" : 4620080,
-  "challenge" : 282723914,
-  "proposal" : 5558632,
-  "choice" : 1
+  "voterKey" : "xhbbs1twrHs9Nl1GdiJcX52bYgHLsUEklpHz+BRI/zw=",
+  "votingPower" : 7859940,
+  "challenge" : 223135486,
+  "proposal" : 2376972,
+  "choice" : 2
 } ]
             """;
 

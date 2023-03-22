@@ -6,96 +6,33 @@ use voting/datums.{Vote}
 test vote_hash1() {
   let v0 =
     Vote(
-      #"1b026f9b9b0d172dfc2fa4a450569fe8cf10a83ce2b616eb1dcd5f786ea199b0",
-      3353282,
-      449181773,
-      2365581,
-      0,
+      #"68fb74df64af1bb4559ed5b1f777515ad9b259923fa1618f354992bac12fd14a",
+      9631517,
+      192691745,
+      1426925,
+      1,
     )
 
   let v1 =
     Vote(
-      #"41906483433636815ccf41357aa2cd1acf78ff11159f72a9a5b0819fb223414c",
-      5215698,
-      449181773,
-      1932430,
-      0,
+      #"8254cca30347062475b28b3669da2a5e4b93c164ed81d5341cf229f6b6f09168",
+      1418415,
+      422503982,
+      5026403,
+      2,
     )
 
   let v2 =
     Vote(
-      #"e040b132e36fae26c7b0d727c2e859b85ae56b7169b00e004f3d27cd0e3fd3fe",
-      4654383,
-      303167468,
-      4988558,
+      #"c616dbb35b70ac7b3d365d4676225c5f9d9b6201cbb141249691f3f81448ff3c",
+      7859940,
+      223135486,
+      2376972,
       2,
-    )
-
-  let v3 =
-    Vote(
-      #"41bb39b472d3875b6e77da2841782e65effbf85447982cd15297ebc28a348809",
-      253840,
-      116457209,
-      2297573,
-      2,
-    )
-
-  let v4 =
-    Vote(
-      #"41bb39b472d3875b6e77da2841782e65effbf85447982cd15297ebc28a348809",
-      253840,
-      131249474,
-      588916,
-      2,
-    )
-
-  let v5 =
-    Vote(
-      #"41bb39b472d3875b6e77da2841782e65effbf85447982cd15297ebc28a348809",
-      253840,
-      303167468,
-      3301549,
-      1,
-    )
-
-  let v6 =
-    Vote(
-      #"1b026f9b9b0d172dfc2fa4a450569fe8cf10a83ce2b616eb1dcd5f786ea199b0",
-      3353282,
-      374145371,
-      5342861,
-      0,
-    )
-
-  let v7 =
-    Vote(
-      #"e040b132e36fae26c7b0d727c2e859b85ae56b7169b00e004f3d27cd0e3fd3fe",
-      4654383,
-      214998680,
-      226531,
-      0,
-    )
-
-  let v8 =
-    Vote(
-      #"41bb39b472d3875b6e77da2841782e65effbf85447982cd15297ebc28a348809",
-      253840,
-      51052969,
-      3531179,
-      2,
-    )
-
-  let v9 =
-    Vote(
-      #"e88e25351f3a23ebca1e4cadf7609b6a087f61d5252f870af5def7578e1bb54e",
-      4620080,
-      282723914,
-      5558632,
-      1,
     )
 
   let items =
-    [v0, v1, v2, v3, v4, v5, v6, v7, v8, v9]
+    [v0, v1, v2]
 
   let hash_fn =
     fn(v: Vote) { sha2_256(builtin.serialise_data(v)) }
@@ -103,5 +40,5 @@ test vote_hash1() {
   let hashed =
     hashed_list.from(items, hash_fn)
 
-  #"d8257d0e22945d17961b4475b589d773b62402a3bf6ce9838c61712ae851d007" == hashed.hash
+  #"9c89699e1d025419538376b61a2fdc866f623a28d45d63e895b77f3745110b94" == hashed.hash
 }
