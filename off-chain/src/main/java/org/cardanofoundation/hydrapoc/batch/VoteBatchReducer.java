@@ -79,11 +79,11 @@ public class VoteBatchReducer {
         val mt = HashedList.create(results, r -> {
             return sha2_256(plutusObjectConverter.toPlutusData(r).serializeToBytes());
         });
-        val merkleTreeRootHash = mt.hash();
+        val batchHash = mt.hash();
 
         // Calculate group result batch datum
         val reduceVoteBatchDatum = groupResultBatchDatum(results, fromIteration + 1);
-        reduceVoteBatchDatum.setMerkleRootHash(merkleTreeRootHash);
+        reduceVoteBatchDatum.setBatchHash(batchHash);
 
         log.info("############# Input Vote Batches ############");
         log.info(JsonUtil.getPrettyJson(results));
@@ -115,7 +115,7 @@ public class VoteBatchReducer {
                         .mem(BigInteger.valueOf(0))
                         .steps(BigInteger.valueOf(0))
                         .build())
-                .redeemer(plutusObjectConverter.toPlutusData(ReduceVoteBatchRedeemer.create(merkleTreeRootHash, fromIteration)))
+                .redeemer(plutusObjectConverter.toPlutusData(ReduceVoteBatchRedeemer.create(batchHash, fromIteration)))
                 .redeemerTag(RedeemerTag.Spend).build())
                 .toList();
 

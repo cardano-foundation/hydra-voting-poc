@@ -59,8 +59,8 @@ class HydraVoteImporterApplicationTests {
         importVotesFromFile();
         System.out.println("creating and posting batches...");
         createAndPostBatch();
-        System.out.println("reducing batches...");
-        reduceBatch();
+//        System.out.println("reducing batches...");
+//        reduceBatch();
     }
 
     //1. Generate 150 votes
@@ -77,7 +77,7 @@ class HydraVoteImporterApplicationTests {
         Thread.sleep(1000); //so that all previous messages are consumed from hydra
         var allVotes = randomVoteGenerator.getAllVotes("votes.json");
 
-        var batchSize = 100;
+        var batchSize = 10;
 
         log.info("Starting import of votes, count:" + allVotes.size());
         var partitions = Lists.partition(allVotes, batchSize);
@@ -98,7 +98,7 @@ class HydraVoteImporterApplicationTests {
     public void createAndPostBatch() throws Exception {
         Thread.sleep(5000);
         var allVotes = randomVoteGenerator.getAllVotes("votes.json");
-        var batchSize = 10;
+        var batchSize = 3;
         var partitions = Lists.partition(allVotes, batchSize);
 
         log.info("Counting votes, count:" + allVotes.size());
@@ -119,19 +119,24 @@ class HydraVoteImporterApplicationTests {
     public void reduceBatch() throws Exception {
         Thread.sleep(1000);
 
-        var batchSize = 5;
+        var batchSize = 3;
 
         var allVotes = randomVoteGenerator.getAllVotes("votes.json");
         var size = Double.valueOf(Math.ceil((double) allVotes.size() / batchSize)).intValue();
 
         log.info("Reducing votes results, size:" + size);
 
-        voteBatchReducer.postReduceBatchTransaction(5, 0);
-        voteBatchReducer.postReduceBatchTransaction(5, 0);
-        voteBatchReducer.postReduceBatchTransaction(5, 0);
-        voteBatchReducer.postReduceBatchTransaction(5, 0);
+        for (int i = 0; i < size; i++) {
+            Thread.sleep(1000);
+            voteBatchReducer.postReduceBatchTransaction(batchSize, 0);
+        }
 
-        voteBatchReducer.postReduceBatchTransaction(4, 1);
+//        voteBatchReducer.postReduceBatchTransaction(5, 0);
+//        voteBatchReducer.postReduceBatchTransaction(5, 0);
+//        voteBatchReducer.postReduceBatchTransaction(5, 0);
+//        voteBatchReducer.postReduceBatchTransaction(5, 0);
+//
+//        voteBatchReducer.postReduceBatchTransaction(4, 1);
 
 //        for (int i = 0; i < size; i++) {
 //            Thread.sleep(100);

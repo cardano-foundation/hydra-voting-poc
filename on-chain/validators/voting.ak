@@ -17,10 +17,10 @@ use voting/datums.{
 }
 
 type Redeemer {
-  // Approve { merkle_tree: MerkleTree<Vote> }
-  CreateVoteBatch { off_chain_merkle_tree_root_hash: Hash<Sha2_256, Vote> }
+  // Approve { batch_hash: MerkleTree<Vote> }
+  CreateVoteBatch { batch_hash: Hash<Sha2_256, Vote> }
   ReduceResults {
-    off_chain_merkle_tree_root_hash: Hash<Sha2_256, ResultsBatchDatum>,
+    batch_hash: Hash<Sha2_256, ResultsBatchDatum>,
     iteration: Int,
   }
 }
@@ -34,66 +34,57 @@ validator {
     // On L2 (Hydra) one will typically lock votes with 0 ADA but on L1 of course each eUTxO is guarded by ca. 1,7 ADA
     expect Spend(output_reference) =
       sc.purpose
+
     let inputs: List<Input> =
       sc.transaction.inputs
+
     let outputs: List<Output> =
       sc.transaction.outputs
-
     when redeemer is {
-      CreateVoteBatch { off_chain_merkle_tree_root_hash } -> {
+      CreateVoteBatch { batch_hash } -> {
+        trace @"get_votes_from_inputs..."
         let votes: List<Vote> =
           get_votes_from_inputs(inputs)
-        trace append_string(
-          @"votes_count:",
-          string.from_int(list.length(votes)),
-        )
-        // let results: Dict<ChallengeProposal, Result> =
-        //   count_votes(votes)
-        // now we need to check if any of the output UTxOs contains results
-        // now we have to check if batch_id matches
-        // let result_with_hash =
-        //   ResultsBatchDatum {
-        //     results,
-        //     iteration: 0,
-        //     merkle_root_hash: off_chain_merkle_tree_root_hash,
-        //   }
+        trace @"got__votes_from_inputs."
+        let results: Dict<ChallengeProposal, Result> =
+          count_votes(votes)
+        let result_with_hash =
+          ResultsBatchDatum { results, iteration: 0, batch_hash }
         list.and(
           [
-            //(bytearray.length(off_chain_merkle_tree_root_hash) == 32)?,
-            //result_sent_to_own_address_match(inputs, outputs, output_reference)?,
-            // results_must_match(sc.transaction.outputs, result_with_hash)?,qq
-            validate_votes(votes, off_chain_merkle_tree_root_hash)?,
+            //(bytearray.length(batch_hash) == 32)?,
+            result_sent_to_own_address_match(inputs, outputs, output_reference)?,
+            results_must_match(sc.transaction.outputs, result_with_hash)?,
+            validate_votes(votes, batch_hash)?,
           ],
         )
       }
-      //results_must_match(sc.transaction.outputs, result_with_hash)?,
-      ReduceResults { off_chain_merkle_tree_root_hash, iteration } -> {
+      ReduceResults { batch_hash, iteration } -> {
         // collect results from all inputs (fail if there are still votes in smart contract)
         // take existing results and compress them, into one
         // check if resulting output datum contains votes counted up properly and that they send result back to the same address
-        // let new_iteration =
-        //   iteration + 1
+        let new_iteration =
+          iteration + 1
         let all_results: List<ResultsBatchDatum> =
           get_vote_results_from_inputs(inputs, iteration)
-        // let result: ResultsBatchDatum =
-        //   count_vote_results(
-        //     vote_results: all_results,
-        //     new_iteration: new_iteration,
-        //   )
-        // let result_with_hash =
-        //   ResultsBatchDatum {
-        //     ..result,
-        //     merkle_root_hash: off_chain_merkle_tree_root_hash,
-        //   }
+        let result: ResultsBatchDatum =
+          count_vote_results(
+            vote_results: all_results,
+            new_iteration: new_iteration,
+          )
+        let result_with_hash =
+          ResultsBatchDatum { ..result, batch_hash: batch_hash }
         list.and(
           [
-            //            (bytearray.length(off_chain_merkle_tree_root_hash) == 32)?,
-            validate_results(all_results, off_chain_merkle_tree_root_hash)?,
+            result_sent_to_own_address_match(inputs, outputs, output_reference)?,
+            validate_results(all_results, batch_hash)?,
+            results_must_match(
+              outputs: sc.transaction.outputs,
+              expected_results: result_with_hash,
+            )?,
           ],
         )
       }
-      //result_sent_to_own_address_match(inputs, outputs, output_reference)?,
-      //results_must_match(sc.transaction.outputs, result_with_hash)?,
       _ ->
         False
     }
@@ -151,59 +142,53 @@ fn results_must_match(
   list.any(
     inline_datums,
     fn(output) {
-      // trace builtin.append_string(
-      //   @"Entering new output:",
-      //   cbor.diagnostic(output),
-      // )
-
       expect InlineDatum(given_results_data) =
         output.datum
 
-      // trace builtin.append_string(
-      //   @"Given_results_data:",
-      //   cbor.diagnostic(given_results_data),
-      // )
       expect given_results_datum: ResultsBatchDatum =
         given_results_data
 
-      // trace builtin.append_string(
-      //   @"Given_results_datum:",
-      //   cbor.diagnostic(given_results_datum),
-      // )
+      trace append_string(
+        @"given_results_datum:",
+        cbor.diagnostic(given_results_datum),
+      )
+
+      trace append_string(
+        @"expected_results:",
+        cbor.diagnostic(expected_results),
+      )
       expected_results == given_results_datum
     },
   )
 }
 
-fn validate_votes(
-  votes: List<Vote>,
-  off_chain_merkle_tree_root_hash: Hash<Sha2_256, Vote>,
-) -> Bool {
+fn validate_votes(votes: List<Vote>, batch_hash: Hash<Sha2_256, Vote>) -> Bool {
+  trace append_string(
+    @"Validating votes..., size:",
+    string.from_int(list.length(votes)),
+  )
+
   let hash_fn =
     fn(v: Vote) { sha2_256(builtin.serialise_data(v)) }
 
   let hashed_list =
     hashed_list.from(votes, hash_fn)
 
-  let on_chain_merkle_tree_root_hash =
+  let on_chain_batch_hash =
     hashed_list.hash
 
   trace builtin.append_string(
     @"on_chain_hash:",
-    cbor.diagnostic(on_chain_merkle_tree_root_hash),
+    cbor.diagnostic(on_chain_batch_hash),
   )
+  trace builtin.append_string(@"off_chain_hash:", cbor.diagnostic(batch_hash))
 
-  trace builtin.append_string(
-    @"off_chain_hash:",
-    cbor.diagnostic(off_chain_merkle_tree_root_hash),
-  )
-
-  on_chain_merkle_tree_root_hash == off_chain_merkle_tree_root_hash
+  on_chain_batch_hash == batch_hash
 }
 
 fn validate_results(
   results: List<ResultsBatchDatum>,
-  off_chain_merkle_tree_root_hash: Hash<Sha2_256, ResultsBatchDatum>,
+  batch_hash: Hash<Sha2_256, ResultsBatchDatum>,
 ) -> Bool {
   let hash_fn =
     fn(r: ResultsBatchDatum) { sha2_256(builtin.serialise_data(r)) }
@@ -211,10 +196,10 @@ fn validate_results(
   let hashed_list =
     hashed_list.from(results, hash_fn)
 
-  let on_chain_merkle_tree_root_hash =
+  let on_chain_batch_hash =
     hashed_list.hash
 
-  on_chain_merkle_tree_root_hash == off_chain_merkle_tree_root_hash
+  batch_hash == on_chain_batch_hash
 }
 
 fn get_votes_from_inputs(inputs: List<Input>) -> List<Vote> {
@@ -266,7 +251,7 @@ fn count_vote_results(
           compare: challenge_proposal.compare,
         ),
         iteration: new_iteration,
-        merkle_root_hash: #"",
+        batch_hash: #"",
       }
     }
 
@@ -275,7 +260,7 @@ fn count_vote_results(
     ResultsBatchDatum {
       results: dict.new(),
       iteration: new_iteration,
-      merkle_root_hash: #"",
+      batch_hash: #"",
     }
 
   list.foldl(vote_results, merging_fn, zero)

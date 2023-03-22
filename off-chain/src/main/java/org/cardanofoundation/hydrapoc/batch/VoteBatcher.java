@@ -105,9 +105,9 @@ public class VoteBatcher {
             }
         }
         val hashedList = HashedList.create(voteDatums, vote -> sha2_256(plutusObjectConverter.toPlutusData(vote).serializeToBytes()));
-        val merkleTreeRootHash = hashedList.hash();
-        resultBatchDatum.setMerkleRootHash(merkleTreeRootHash);
-        log.info("merkle_root:" + HexUtil.encodeHexString(merkleTreeRootHash).toUpperCase());
+        val batchHash = hashedList.hash();
+        resultBatchDatum.setBatchHash(batchHash);
+        log.info("batchHash:" + HexUtil.encodeHexString(batchHash).toUpperCase());
 
         log.info("############# Input Votes ############");
         log.info(JsonUtil.getPrettyJson(utxoTuples.stream().map(utxoVoteDatumTuple -> utxoVoteDatumTuple._2).toList()));
@@ -141,7 +141,7 @@ public class VoteBatcher {
                         .build()
                 )
 
-                .redeemer(plutusObjectConverter.toPlutusData(CreateVoteBatchRedeemer.create(merkleTreeRootHash)))
+                .redeemer(plutusObjectConverter.toPlutusData(CreateVoteBatchRedeemer.create(batchHash)))
                 .redeemerTag(RedeemerTag.Spend).build())
                 .toList();
 

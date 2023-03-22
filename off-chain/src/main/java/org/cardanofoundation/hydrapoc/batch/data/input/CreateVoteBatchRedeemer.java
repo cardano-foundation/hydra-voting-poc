@@ -13,15 +13,15 @@ import lombok.NoArgsConstructor;
 public class CreateVoteBatchRedeemer {
 
     @PlutusField
-    private byte[] merkleTreeRootHash;
+    private byte[] batchHash;
 
-    public static CreateVoteBatchRedeemer create(byte[] merkleTreeRootHash) {
-        if (merkleTreeRootHash.length != 32) {
+    public static CreateVoteBatchRedeemer create(byte[] batchHash) {
+        if (batchHash.length != 32) {
             throw new IllegalArgumentException("Doesn't seem like a valid SHA2-256 hash");
         }
 
         try {
-            return new CreateVoteBatchRedeemer(merkleTreeRootHash);
+            return new CreateVoteBatchRedeemer(batchHash);
         } catch (Exception e) {
             throw new RuntimeException("Create failed", e);
         }

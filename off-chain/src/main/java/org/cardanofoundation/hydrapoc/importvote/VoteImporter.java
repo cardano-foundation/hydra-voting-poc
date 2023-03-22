@@ -28,6 +28,7 @@ import org.springframework.retry.annotation.Backoff;
 import org.springframework.retry.annotation.Retryable;
 import org.springframework.stereotype.Component;
 
+import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.util.Collection;
 
@@ -81,7 +82,7 @@ public class VoteImporter {
                         .address(voteBatchContractAddress)
                         .value(Value
                                 .builder()
-                                .coin(adaToLovelace(1))
+                                .coin(adaToLovelace(BigDecimal.ZERO))
                                 .build()
                         )
                         .inlineDatum(datum)
@@ -109,6 +110,8 @@ public class VoteImporter {
             throw new RuntimeException("Transaction failed. " + result.getResponse());
         else
             log.info("Import Transaction Id : " + result.getValue());
+
+        log.info("Fee:{} lovelaces", transaction.getBody().getFee());
 
         transactionUtil.waitForTransaction(result);
 

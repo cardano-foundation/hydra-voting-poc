@@ -35,6 +35,6 @@ pub type VotingDatum {
 
 pub type ResultsBatchDatum {
   results: Dict<ChallengeProposal, Result>,
-  merkle_root_hash: ByteArray,
+  batch_hash: ByteArray,
   iteration: Int,
 }

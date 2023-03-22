@@ -37,7 +37,7 @@ public class HydraUtxoSupplier implements UtxoSupplier {
             return Collections.EMPTY_LIST;
 
         try {
-            val getUTxOResponse = hydraClient.getUTXOs().block(Duration.ofSeconds(10));
+            val getUTxOResponse = hydraClient.getUTXOs().block(Duration.ofSeconds(50));
 
             val utxos = getUTxOResponse.getUtxo().entrySet()
                     .stream().filter(utxoEntry -> utxoEntry.getValue().getAddress().equals(address))

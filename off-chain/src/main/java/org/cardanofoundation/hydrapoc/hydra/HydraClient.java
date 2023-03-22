@@ -13,6 +13,7 @@ import org.cardanofoundation.hydra.client.model.query.response.GetUTxOResponse;
 import org.cardanofoundation.hydra.client.model.query.response.Response;
 import org.cardanofoundation.hydra.client.model.query.response.TxInvalidResponse;
 import org.cardanofoundation.hydra.client.model.query.response.TxValidResponse;
+import org.cardanofoundation.hydrapoc.util.ByteUtil;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Component;
@@ -85,6 +86,7 @@ public class HydraClient implements HydraStateEventListener, HydraQueryEventList
     }
 
     public Mono<TxResult> submitTx(byte[] cborTx) {
+        log.info("Transaction size: {}", ByteUtil.humanReadableByteCountBin(cborTx.length));
         return Mono.create(monoSink -> {
             storeMonoSinkReference(new TxRequest(TransactionUtil.getTxHash(cborTx)), monoSink);
             hydraWSClient.newTx(HexUtil.encodeHexString(cborTx));
