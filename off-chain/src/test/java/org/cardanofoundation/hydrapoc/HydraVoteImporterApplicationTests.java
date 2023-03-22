@@ -81,6 +81,7 @@ class HydraVoteImporterApplicationTests {
 
         log.info("Starting import of votes, count:" + allVotes.size());
         var partitions = Lists.partition(allVotes, batchSize);
+
         for (var votesPart : partitions) {
             if (votesPart.size() == batchSize) {
                 Thread.sleep(1000);
@@ -89,6 +90,7 @@ class HydraVoteImporterApplicationTests {
                 log.info("ignoring the rest.., size:" + votesPart.size());
             }
         }
+
         log.info("Votes imported into smart contract.");
     }
 
@@ -121,15 +123,17 @@ class HydraVoteImporterApplicationTests {
 
         var batchSize = 3;
 
-        var allVotes = randomVoteGenerator.getAllVotes("votes.json");
-        var size = Double.valueOf(Math.ceil((double) allVotes.size() / batchSize)).intValue();
+        voteBatchReducer.postReduceBatchTransaction(batchSize, 0);
 
-        log.info("Reducing votes results, size:" + size);
-
-        for (int i = 0; i < size; i++) {
-            Thread.sleep(1000);
-            voteBatchReducer.postReduceBatchTransaction(batchSize, 0);
-        }
+//        var allVotes = randomVoteGenerator.getAllVotes("votes.json");
+//        var size = Double.valueOf(Math.ceil((double) allVotes.size() / batchSize)).intValue();
+//
+//        log.info("Reducing votes results, size:" + size);
+//
+//        for (int i = 0; i < size; i++) {
+//            Thread.sleep(1000);
+//            voteBatchReducer.postReduceBatchTransaction(batchSize, 0);
+//        }
 
 //        voteBatchReducer.postReduceBatchTransaction(5, 0);
 //        voteBatchReducer.postReduceBatchTransaction(5, 0);

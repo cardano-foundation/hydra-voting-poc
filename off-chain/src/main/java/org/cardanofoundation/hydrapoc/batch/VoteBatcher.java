@@ -107,7 +107,7 @@ public class VoteBatcher {
         val hashedList = HashedList.create(voteDatums, vote -> sha2_256(plutusObjectConverter.toPlutusData(vote).serializeToBytes()));
         val batchHash = hashedList.hash();
         resultBatchDatum.setBatchHash(batchHash);
-        log.info("batchHash:" + HexUtil.encodeHexString(batchHash).toUpperCase());
+        log.info("batchHash:" + HexUtil.encodeHexString(batchHash));
 
         log.info("############# Input Votes ############");
         log.info(JsonUtil.getPrettyJson(utxoTuples.stream().map(utxoVoteDatumTuple -> utxoVoteDatumTuple._2).toList()));

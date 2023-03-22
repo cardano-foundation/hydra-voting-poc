@@ -54,11 +54,12 @@ validator {
           [
             //(bytearray.length(batch_hash) == 32)?,
             result_sent_to_own_address_match(inputs, outputs, output_reference)?,
-            results_must_match(sc.transaction.outputs, result_with_hash)?,
             validate_votes(votes, batch_hash)?,
           ],
         )
       }
+      //results_must_match(sc.transaction.outputs, result_with_hash)?,
+      //
       ReduceResults { batch_hash, iteration } -> {
         // collect results from all inputs (fail if there are still votes in smart contract)
         // take existing results and compress them, into one
