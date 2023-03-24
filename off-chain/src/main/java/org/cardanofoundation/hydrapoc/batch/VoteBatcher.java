@@ -36,10 +36,12 @@ import org.springframework.stereotype.Component;
 import java.math.BigInteger;
 import java.util.ArrayList;
 import java.util.Optional;
+import java.util.function.Function;
 
 import static com.bloxbean.cardano.client.common.ADAConversionUtil.adaToLovelace;
 import static com.bloxbean.cardano.client.common.CardanoConstants.LOVELACE;
 import static java.util.Collections.emptySet;
+import static org.cardanofoundation.hydrapoc.util.MoreComparators.createOrderComparator;
 import static org.cardanofoundation.util.Hashing.sha2_256;
 
 @Component
@@ -69,7 +71,9 @@ public class VoteBatcher {
         log.info("Sender Address: " + sender);
         log.info("Script Address: " + voteBatcherScriptAddress);
 
-        val utxoTuples = voteUtxoFinder.getUtxosWithVotes(batchSize);
+        val utxoTuples = voteUtxoFinder.getUtxosWithVotes(batchSize)
+                .stream().sorted(createOrderComparator()).toList();
+
         if (utxoTuples.size() == 0) {
             log.warn("No utxo found");
             return Optional.empty();
@@ -104,10 +108,6 @@ public class VoteBatcher {
                     log.warn("Invalid vote, " + voteDatum.getChoice());
             }
         }
-        val hashedList = HashedList.create(voteDatums, vote -> sha2_256(plutusObjectConverter.toPlutusData(vote).serializeToBytes()));
-        val batchHash = hashedList.hash();
-        resultBatchDatum.setBatchHash(batchHash);
-        log.info("batchHash:" + HexUtil.encodeHexString(batchHash));
 
         log.info("############# Input Votes ############");
         log.info(JsonUtil.getPrettyJson(utxoTuples.stream().map(utxoVoteDatumTuple -> utxoVoteDatumTuple._2).toList()));
@@ -117,6 +117,13 @@ public class VoteBatcher {
         // Build and post contract txn
         val utxoSelectionStrategy = new LargestFirstUtxoSelectionStrategy(utxoSupplier);
         val collateralUtxos = utxoSelectionStrategy.select(sender, new Amount(LOVELACE, adaToLovelace(1)), emptySet());
+
+        Function<Object, byte[]> hash_fn = vote -> sha2_256(plutusObjectConverter.toPlutusData(vote).serializeToBytes());
+        val hashedList = HashedList.create(voteDatums, hash_fn);
+
+        val batchHash = hashedList.hash();
+        resultBatchDatum.setBatchHash(batchHash);
+        log.info("batchHash:" + HexUtil.encodeHexString(batchHash));
 
         // Build the expected output
         val outputDatum = plutusObjectConverter.toPlutusData(resultBatchDatum);
@@ -131,23 +138,23 @@ public class VoteBatcher {
         val scriptUtxos = utxoTuples.stream().map(utxoVoteDatumTuple -> utxoVoteDatumTuple._1)
                 .toList();
 
-        val scriptCallContexts = scriptUtxos.stream().map(utxo -> ScriptCallContext
-                .builder()
-                .script(voteBatcherContract)
-                .utxo(utxo)
-                .exUnits(ExUnits.builder()  // Exact exUnits will be calculated later
-                        .mem(BigInteger.valueOf(0))
-                        .steps(BigInteger.valueOf(0))
-                        .build()
-                )
-
-                .redeemer(plutusObjectConverter.toPlutusData(CreateVoteBatchRedeemer.create(batchHash)))
-                .redeemerTag(RedeemerTag.Spend).build())
-                .toList();
-
         var txBuilder = output.outputBuilder()
                 .buildInputs(InputBuilders.createFromUtxos(scriptUtxos, sender))
                 .andThen(CollateralBuilders.collateralOutputs(sender, new ArrayList<>(collateralUtxos))); // CIP-40
+
+        val scriptCallContexts = scriptUtxos.stream().map(utxo -> ScriptCallContext
+                        .builder()
+                        .script(voteBatcherContract)
+                        .utxo(utxo)
+                        .exUnits(ExUnits.builder()  // Exact exUnits will be calculated later
+                                .mem(BigInteger.valueOf(0))
+                                .steps(BigInteger.valueOf(0))
+                                .build()
+                        )
+
+                        .redeemer(plutusObjectConverter.toPlutusData(CreateVoteBatchRedeemer.create(batchHash)))
+                        .redeemerTag(RedeemerTag.Spend).build())
+                .toList();
 
         for (var scriptCallContext : scriptCallContexts) {
             txBuilder = txBuilder.andThen(ScriptCallContextProviders.createFromScriptCallContext(scriptCallContext));

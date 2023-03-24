@@ -20,7 +20,7 @@ public class HydraProtocolParamsSupplier implements ProtocolParamsSupplier {
 
     private final ObjectMapper mapper = new ObjectMapper();
 
-    private JsonNode protoParamsJson;
+    private final JsonNode protoParamsJson;
 
     public HydraProtocolParamsSupplier() {
         try (InputStream is = getClass().getClassLoader().getResourceAsStream("hydra/protocol-parameters.json")) {
@@ -53,7 +53,7 @@ public class HydraProtocolParamsSupplier implements ProtocolParamsSupplier {
         JsonNode plutusV2CostJson = protoParamsJson.get("costModels").get(lang);
         Iterator<String> opsIter = plutusV2CostJson.fieldNames();
         Map<String, Long> costModel = new HashMap<>();
-        while(opsIter.hasNext()) {
+        while (opsIter.hasNext()) {
             String op = opsIter.next();
             costModel.put(op, plutusV2CostJson.get(op).asLong());
         }

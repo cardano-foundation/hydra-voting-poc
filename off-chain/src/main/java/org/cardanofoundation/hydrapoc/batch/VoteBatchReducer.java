@@ -34,13 +34,14 @@ import org.springframework.stereotype.Component;
 
 import java.math.BigInteger;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.Optional;
 
 import static com.bloxbean.cardano.client.common.ADAConversionUtil.adaToLovelace;
 import static com.bloxbean.cardano.client.common.CardanoConstants.LOVELACE;
 import static com.bloxbean.cardano.client.transaction.spec.Language.PLUTUS_V2;
+import static java.util.Collections.emptySet;
 import static org.cardanofoundation.hydrapoc.batch.util.CountVoteUtil.groupResultBatchDatum;
+import static org.cardanofoundation.hydrapoc.util.MoreComparators.createOrderComparator;
 import static org.cardanofoundation.util.Hashing.sha2_256;
 
 @Component
@@ -69,7 +70,9 @@ public class VoteBatchReducer {
         log.info("Sender Address: " + sender);
         log.info("Script Address: " + voteBatcherScriptAddress);
 
-        val utxoTuples = voteUtxoFinder.getUtxosWithVoteBatches(batchSize, fromIteration);
+        val utxoTuples = voteUtxoFinder.getUtxosWithVoteBatches(batchSize, fromIteration)
+                .stream().sorted(createOrderComparator()).toList();
+
         if (utxoTuples.size() == 0) {
             log.warn("No utxo found");
             return Optional.empty();
@@ -92,7 +95,7 @@ public class VoteBatchReducer {
 
         // Build and post contract txn
         val utxoSelectionStrategy = new LargestFirstUtxoSelectionStrategy(utxoSupplier);
-        val collateralUtxos = utxoSelectionStrategy.select(sender, new Amount(LOVELACE, adaToLovelace(1)), Collections.emptySet());
+        val collateralUtxos = utxoSelectionStrategy.select(sender, new Amount(LOVELACE, adaToLovelace(1)), emptySet());
 
         // Build the expected output
         val outputDatum = plutusObjectConverter.toPlutusData(reduceVoteBatchDatum);

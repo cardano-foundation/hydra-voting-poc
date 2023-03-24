@@ -59,8 +59,8 @@ class HydraVoteImporterApplicationTests {
         importVotesFromFile();
         System.out.println("creating and posting batches...");
         createAndPostBatch();
-//        System.out.println("reducing batches...");
-//        reduceBatch();
+        System.out.println("reducing batches...");
+        reduceBatch();
     }
 
     //1. Generate 150 votes
@@ -84,7 +84,7 @@ class HydraVoteImporterApplicationTests {
 
         for (var votesPart : partitions) {
             if (votesPart.size() == batchSize) {
-                Thread.sleep(1000);
+                //Thread.sleep(1000);
                 voteImporter.importVotes(votesPart);
             } else {
                 log.info("ignoring the rest.., size:" + votesPart.size());
@@ -119,11 +119,26 @@ class HydraVoteImporterApplicationTests {
     // Run this test multiple times to reduce batches to 1 batch
     @Test
     public void reduceBatch() throws Exception {
-        Thread.sleep(1000);
+        //Thread.sleep(5000);
 
-        var batchSize = 3;
+        voteBatchReducer.postReduceBatchTransaction(5, 1);
+        voteBatchReducer.postReduceBatchTransaction(5, 1);
+        voteBatchReducer.postReduceBatchTransaction(5, 1);
+        voteBatchReducer.postReduceBatchTransaction(5, 1);
+        voteBatchReducer.postReduceBatchTransaction(5, 1);
 
-        voteBatchReducer.postReduceBatchTransaction(batchSize, 0);
+//        voteBatchReducer.postReduceBatchTransaction(5, 0);
+//        voteBatchReducer.postReduceBatchTransaction(5, 0);
+//        voteBatchReducer.postReduceBatchTransaction(5, 0);
+//        voteBatchReducer.postReduceBatchTransaction(5, 0);
+//        voteBatchReducer.postReduceBatchTransaction(5, 0);
+//        voteBatchReducer.postReduceBatchTransaction(5, 0);
+//        voteBatchReducer.postReduceBatchTransaction(5, 0);
+//        voteBatchReducer.postReduceBatchTransaction(5, 0);
+//        voteBatchReducer.postReduceBatchTransaction(5, 0);
+//
+//        voteBatchReducer.postReduceBatchTransaction(5, 1);
+//        voteBatchReducer.postReduceBatchTransaction(5, 1);
 
 //        var allVotes = randomVoteGenerator.getAllVotes("votes.json");
 //        var size = Double.valueOf(Math.ceil((double) allVotes.size() / batchSize)).intValue();

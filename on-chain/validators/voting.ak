@@ -51,7 +51,8 @@ validator {
         list.and(
           [
             (bytearray.length(batch_hash) == 32)?,
-            results_must_match(sc.transaction.outputs, result_with_hash)?,
+            validate_votes(votes, batch_hash)?,
+            //results_must_match(sc.transaction.outputs, result_with_hash)?,
             validators.any_output_contains_own_validator_address(
               inputs,
               outputs,
@@ -60,7 +61,6 @@ validator {
           ],
         )
       }
-      //validate_votes(votes, batch_hash)?,
       ReduceResults { batch_hash, iteration } -> {
         // collect results from all inputs (fail if there are still votes in smart contract)
         // take existing results and compress them, into one
@@ -83,14 +83,14 @@ validator {
               outputs,
               output_reference,
             )?,
-            //validate_results(all_results, batch_hash)?,
-            results_must_match(
-              outputs: sc.transaction.outputs,
-              expected_results: result_with_hash,
-            )?,
+            validate_results(all_results, batch_hash)?,
           ],
         )
       }
+      // results_must_match(
+      //   outputs: sc.transaction.outputs,
+      //   expected_results: result_with_hash,
+      // )?,
       _ ->
         False
     }
@@ -116,12 +116,17 @@ fn results_must_match(
       },
     )
 
-  trace append_string(@"inline_datums:", string.from_int(list.length(outputs)))
+  trace append_string(
+    @"inline_datums:",
+    string.from_int(list.length(inline_datums)),
+  )
 
-  list.any(inline_datums, fn(output) { trace @"Before InlineDatum expect."
+  list.any(
+    inline_datums,
+    fn(inline_datum_output) { trace @"Before InlineDatum expect."
 
       expect InlineDatum(given_results_data) =
-        output.datum
+        inline_datum_output.datum
 
       trace @"After InlineDatum expect."
       expect given_results_datum: ResultsBatchDatum =
@@ -130,15 +135,16 @@ fn results_must_match(
       trace @"After ResultsBatchDatum cast."
 
       trace append_string(
-        @"given_results_datum:",
+        @"Given_results_datum:",
         cbor.diagnostic(given_results_datum),
       )
 
       trace append_string(
-        @"expected_results:",
+        @"Expected_results:",
         cbor.diagnostic(expected_results),
       )
-      expected_results == given_results_datum })
+      (expected_results == given_results_datum)? },
+  )
 }
 
 fn validate_votes(votes: List<Vote>, batch_hash: Hash<Sha2_256, Vote>) -> Bool {
