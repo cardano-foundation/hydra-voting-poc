@@ -26,7 +26,7 @@ public class ResultBatchDatum {
     private long iteration;
 
     public static ResultBatchDatum empty(long iteration) {
-        return new ResultBatchDatum(new LinkedHashMap<>(), new byte[0], iteration);
+        return new ResultBatchDatum(new HashMap<>(), new byte[0], iteration);
     }
 
     public void add(ChallengeProposalDatum challengeProposal, ResultDatum result) {

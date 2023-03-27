@@ -41,7 +41,6 @@ import java.util.function.Function;
 import static com.bloxbean.cardano.client.common.ADAConversionUtil.adaToLovelace;
 import static com.bloxbean.cardano.client.common.CardanoConstants.LOVELACE;
 import static java.util.Collections.emptySet;
-import static org.cardanofoundation.hydrapoc.util.MoreComparators.createOrderComparator;
 import static org.cardanofoundation.util.Hashing.sha2_256;
 
 @Component
@@ -71,8 +70,7 @@ public class VoteBatcher {
         log.info("Sender Address: " + sender);
         log.info("Script Address: " + voteBatcherScriptAddress);
 
-        val utxoTuples = voteUtxoFinder.getUtxosWithVotes(batchSize)
-                .stream().sorted(createOrderComparator()).toList();
+        val utxoTuples = voteUtxoFinder.getUtxosWithVotes(batchSize);
 
         if (utxoTuples.size() == 0) {
             log.warn("No utxo found");
@@ -112,11 +110,6 @@ public class VoteBatcher {
         log.info("############# Input Votes ############");
         log.info(JsonUtil.getPrettyJson(utxoTuples.stream().map(utxoVoteDatumTuple -> utxoVoteDatumTuple._2).toList()));
         log.info("########### Result Datum #############");
-        log.info(JsonUtil.getPrettyJson(resultBatchDatum));
-
-        // Build and post contract txn
-        val utxoSelectionStrategy = new LargestFirstUtxoSelectionStrategy(utxoSupplier);
-        val collateralUtxos = utxoSelectionStrategy.select(sender, new Amount(LOVELACE, adaToLovelace(1)), emptySet());
 
         Function<Object, byte[]> hash_fn = vote -> sha2_256(plutusObjectConverter.toPlutusData(vote).serializeToBytes());
         val hashedList = HashedList.create(voteDatums, hash_fn);
@@ -124,6 +117,12 @@ public class VoteBatcher {
         val batchHash = hashedList.hash();
         resultBatchDatum.setBatchHash(batchHash);
         log.info("batchHash:" + HexUtil.encodeHexString(batchHash));
+
+        log.info(JsonUtil.getPrettyJson(resultBatchDatum));
+
+        // Build and post contract txn
+        val utxoSelectionStrategy = new LargestFirstUtxoSelectionStrategy(utxoSupplier);
+        val collateralUtxos = utxoSelectionStrategy.select(sender, new Amount(LOVELACE, adaToLovelace(1)), emptySet());
 
         // Build the expected output
         val outputDatum = plutusObjectConverter.toPlutusData(resultBatchDatum);

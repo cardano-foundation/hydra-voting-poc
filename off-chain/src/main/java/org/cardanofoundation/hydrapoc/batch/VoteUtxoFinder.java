@@ -12,6 +12,7 @@ import lombok.val;
 import org.cardanofoundation.hydrapoc.batch.data.output.ResultBatchDatum;
 import org.cardanofoundation.hydrapoc.commands.PlutusScriptUtil;
 import org.cardanofoundation.hydrapoc.importvote.VoteDatum;
+import org.cardanofoundation.hydrapoc.util.MoreComparators;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 
@@ -19,6 +20,8 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
+
+import static org.cardanofoundation.hydrapoc.util.MoreComparators.createOrderComparator;
 
 @Component
 @RequiredArgsConstructor
@@ -53,6 +56,7 @@ public class VoteUtxoFinder {
                         return new Tuple<>(utxo, voteDatum.orElse(null));
                     })
                     .filter(utxoOptionalTuple -> utxoOptionalTuple._2 != null)
+                    .sorted(createOrderComparator())
                     .toList();
 
             utxos.addAll(utxoTuples);
@@ -63,6 +67,7 @@ public class VoteUtxoFinder {
         }
 
         log.info(utxos.toString());
+
         return utxos;
     }
 
@@ -91,7 +96,9 @@ public class VoteUtxoFinder {
 
                         return new Tuple<>(utxo, resultBatchDatumOptional.orElse(null));
                     })
-                    .filter(utxoOptionalTuple -> utxoOptionalTuple._2 != null && utxoOptionalTuple._2.getIteration() == iteration).toList();
+                    .filter(utxoOptionalTuple -> utxoOptionalTuple._2 != null && utxoOptionalTuple._2.getIteration() == iteration)
+                    .sorted(MoreComparators.createOrderComparator())
+                    .toList();
 
             utxos.addAll(utxoTuples);
             if (utxos.size() >= batchSize) {

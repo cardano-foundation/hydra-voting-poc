@@ -1,17 +1,20 @@
 use acca/collections/hashed_list
+use acca/datums as adatums
+use acca/ordering as aordering
 use acca/validators
 use aiken/builtin.{append_string}
-use aiken/bytearray
-use aiken/cbor
 use aiken/dict.{Dict}
 use aiken/hash.{Hash, Sha2_256, sha2_256}
 use aiken/list
 use aiken/option
-use aiken/string
 use aiken/transaction.{InlineDatum, Input, Output, ScriptContext, Spend}
 use voting/challenge_proposal.{Challenge, ChallengeProposal, Proposal}
-use voting/datums.{
-  Choice, FlatVote, Result, ResultsBatchDatum, Vote, VotingDatum, VotingPower,
+use voting/result.{Result}
+use voting/results_batch_datum.{ResultsBatchDatum}
+use voting/vote.{Choice, FlatVote, Vote, VotingPower}
+
+// respective pubkey hashes for authorised parties
+type VotingDatum {
 }
 
 type Redeemer {
@@ -40,17 +43,14 @@ validator {
       sc.transaction.outputs
     when redeemer is {
       CreateVoteBatch { batch_hash } -> {
-        trace @"get_votes_from_inputs..."
         let votes: List<Vote> =
           get_votes_from_inputs(inputs)
-        trace @"got__votes_from_inputs."
         let results: Dict<ChallengeProposal, Result> =
           count_votes(votes)
         let result_with_hash =
           ResultsBatchDatum { results, iteration: 0, batch_hash }
         list.and(
           [
-            (bytearray.length(batch_hash) == 32)?,
             validate_votes(votes, batch_hash)?,
             //results_must_match(sc.transaction.outputs, result_with_hash)?,
             validators.any_output_contains_own_validator_address(
@@ -84,13 +84,10 @@ validator {
               output_reference,
             )?,
             validate_results(all_results, batch_hash)?,
+            results_must_match(sc.transaction.outputs, result_with_hash)?,
           ],
         )
       }
-      // results_must_match(
-      //   outputs: sc.transaction.outputs,
-      //   expected_results: result_with_hash,
-      // )?,
       _ ->
         False
     }
@@ -99,60 +96,32 @@ validator {
 
 fn results_must_match(
   outputs: List<Output>,
-  expected_results: ResultsBatchDatum,
+  on_chain_results_datum: ResultsBatchDatum,
 ) -> Bool {
-  trace append_string(@"OutputsCount:", string.from_int(list.length(outputs)))
+  let result_checker =
+    fn(o: Output) {
+      expect InlineDatum(off_chain_results_data) =
+        o.datum
 
-  let inline_datums =
-    list.filter(
-      outputs,
-      fn(o) {
-        when o.datum is {
-          InlineDatum(_) ->
-            True
-          _ ->
-            False
-        }
-      },
-    )
+      expect off_chain_results_datum: ResultsBatchDatum =
+        off_chain_results_data
 
-  trace append_string(
-    @"inline_datums:",
-    string.from_int(list.length(inline_datums)),
-  )
+      let ord =
+        results_batch_datum.compare(
+          off_chain_results_datum,
+          on_chain_results_datum,
+        )
 
-  list.any(
-    inline_datums,
-    fn(inline_datum_output) { trace @"Before InlineDatum expect."
+      trace append_string(@"Comparison:", aordering.to_string(ord))
 
-      expect InlineDatum(given_results_data) =
-        inline_datum_output.datum
+      ord == Equal
+    }
 
-      trace @"After InlineDatum expect."
-      expect given_results_datum: ResultsBatchDatum =
-        given_results_data
-
-      trace @"After ResultsBatchDatum cast."
-
-      trace append_string(
-        @"Given_results_datum:",
-        cbor.diagnostic(given_results_datum),
-      )
-
-      trace append_string(
-        @"Expected_results:",
-        cbor.diagnostic(expected_results),
-      )
-      (expected_results == given_results_datum)? },
-  )
+  list.filter(outputs, adatums.is_inline_datum)
+    |> list.any(result_checker)
 }
 
 fn validate_votes(votes: List<Vote>, batch_hash: Hash<Sha2_256, Vote>) -> Bool {
-  trace append_string(
-    @"Validating votes..., size:",
-    string.from_int(list.length(votes)),
-  )
-
   let hash_fn =
     fn(v: Vote) { sha2_256(builtin.serialise_data(v)) }
 
@@ -161,12 +130,6 @@ fn validate_votes(votes: List<Vote>, batch_hash: Hash<Sha2_256, Vote>) -> Bool {
 
   let on_chain_batch_hash =
     hashed_list.hash
-
-  trace builtin.append_string(
-    @"on_chain_hash:",
-    cbor.diagnostic(on_chain_batch_hash),
-  )
-  trace builtin.append_string(@"off_chain_hash:", cbor.diagnostic(batch_hash))
 
   on_chain_batch_hash == batch_hash
 }

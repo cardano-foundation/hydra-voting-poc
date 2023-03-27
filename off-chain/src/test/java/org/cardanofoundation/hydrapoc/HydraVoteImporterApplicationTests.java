@@ -59,8 +59,8 @@ class HydraVoteImporterApplicationTests {
         importVotesFromFile();
         System.out.println("creating and posting batches...");
         createAndPostBatch();
-        System.out.println("reducing batches...");
-        reduceBatch();
+//        System.out.println("reducing batches...");
+//        reduceBatch();
     }
 
     //1. Generate 150 votes
@@ -77,7 +77,7 @@ class HydraVoteImporterApplicationTests {
         //Thread.sleep(1000); //so that all previous messages are consumed from hydra
         var allVotes = randomVoteGenerator.getAllVotes("votes.json");
 
-        var batchSize = 10;
+        var batchSize = 100;
 
         log.info("Starting import of votes, count:" + allVotes.size());
         var partitions = Lists.partition(allVotes, batchSize);

@@ -1,7 +1,7 @@
 use acca/collections/hashed_list
 use aiken/builtin
 use aiken/hash.{sha2_256}
-use voting/datums.{Vote}
+use voting/vote.{Vote}
 
 test vote_hash1() {
   let v0 =

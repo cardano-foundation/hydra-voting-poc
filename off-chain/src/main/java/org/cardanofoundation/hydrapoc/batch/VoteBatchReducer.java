@@ -41,7 +41,6 @@ import static com.bloxbean.cardano.client.common.CardanoConstants.LOVELACE;
 import static com.bloxbean.cardano.client.transaction.spec.Language.PLUTUS_V2;
 import static java.util.Collections.emptySet;
 import static org.cardanofoundation.hydrapoc.batch.util.CountVoteUtil.groupResultBatchDatum;
-import static org.cardanofoundation.hydrapoc.util.MoreComparators.createOrderComparator;
 import static org.cardanofoundation.util.Hashing.sha2_256;
 
 @Component
@@ -70,8 +69,7 @@ public class VoteBatchReducer {
         log.info("Sender Address: " + sender);
         log.info("Script Address: " + voteBatcherScriptAddress);
 
-        val utxoTuples = voteUtxoFinder.getUtxosWithVoteBatches(batchSize, fromIteration)
-                .stream().sorted(createOrderComparator()).toList();
+        val utxoTuples = voteUtxoFinder.getUtxosWithVoteBatches(batchSize, fromIteration);
 
         if (utxoTuples.size() == 0) {
             log.warn("No utxo found");

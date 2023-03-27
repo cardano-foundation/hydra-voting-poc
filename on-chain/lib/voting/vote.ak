@@ -1,5 +1,4 @@
 use acca/hash.{PubKeyHash} as ahash
-use aiken/dict.{Dict}
 use voting/challenge_proposal.{Challenge, ChallengeProposal, Proposal}
 
 pub type VotingPower =
@@ -21,20 +20,4 @@ pub type FlatVote {
   yes: VotingPower,
   no: VotingPower,
   abstain: VotingPower,
-}
-
-pub type Result {
-  yes: VotingPower,
-  no: VotingPower,
-  abstain: VotingPower,
-}
-
-// respective pubkey hashes for authorised parties
-pub type VotingDatum {
-}
-
-pub type ResultsBatchDatum {
-  results: Dict<ChallengeProposal, Result>,
-  batch_hash: ByteArray,
-  iteration: Int,
 }
