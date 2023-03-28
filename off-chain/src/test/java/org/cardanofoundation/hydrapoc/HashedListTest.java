@@ -47,7 +47,7 @@ public class HashedListTest {
     public void test_001() throws JsonProcessingException {
         val items = objectMapper.readValue(votesJson, new TypeReference<List<VoteDatum>>() {});
 
-        items.stream().forEach(voteDatum -> {
+        items.forEach(voteDatum -> {
             System.out.println(encodeHexString(voteDatum.getVoterKey()));
         });
 

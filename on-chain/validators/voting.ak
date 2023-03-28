@@ -7,12 +7,11 @@ use aiken/cbor
 use aiken/dict.{Dict}
 use aiken/hash.{Hash, Sha2_256, sha2_256}
 use aiken/list
-use aiken/option
 use aiken/transaction.{InlineDatum, Input, Output, ScriptContext, Spend}
 use voting/challenge_proposal.{Challenge, ChallengeProposal, Proposal}
 use voting/result.{Result}
 use voting/results_batch_datum.{ResultsBatchDatum}
-use voting/vote.{Choice, FlatVote, Vote, VotingPower}
+use voting/vote.{FlatVote, Vote}
 
 // respective pubkey hashes for authorised parties
 type VotingDatum {
@@ -20,9 +19,9 @@ type VotingDatum {
 
 type Redeemer {
   // Approve { batch_hash: MerkleTree<Vote> }
-  CreateVoteBatch { batch_hash: Hash<Sha2_256, Vote> }
+  CreateVoteBatch { off_chain_batch_hash: Hash<Sha2_256, Vote> }
   ReduceResults {
-    batch_hash: Hash<Sha2_256, ResultsBatchDatum>,
+    off_chain_batch_hash: Hash<Sha2_256, ResultsBatchDatum>,
     iteration: Int,
   }
 }
@@ -43,26 +42,30 @@ validator {
     let outputs: List<Output> =
       sc.transaction.outputs
     when redeemer is {
-      CreateVoteBatch { batch_hash } -> {
+      CreateVoteBatch { off_chain_batch_hash } -> {
         let votes: List<Vote> =
           get_votes_from_inputs(inputs)
         let results: Dict<ChallengeProposal, Result> =
           count_votes(votes)
-        let on_chain_results_datum =
-          ResultsBatchDatum { results, iteration: 0, batch_hash }
+        let on_chain_results =
+          ResultsBatchDatum {
+            results,
+            iteration: 0,
+            batch_hash: off_chain_batch_hash,
+          }
         list.and(
           [
-            validate_votes(votes, batch_hash)?,
             validators.any_output_contains_own_validator_address(
               inputs,
               outputs,
               output_reference,
             )?,
-            results_must_match(sc.transaction.outputs, on_chain_results_datum)?,
+            validate_votes(votes, off_chain_batch_hash)?,
+            results_must_match(sc.transaction.outputs, on_chain_results)?,
           ],
         )
       }
-      ReduceResults { batch_hash, iteration } -> {
+      ReduceResults { off_chain_batch_hash, iteration } -> {
         // collect results from all inputs (fail if there are still votes in smart contract)
         // take existing results and compress them, into one
         // check if resulting output datum contains votes counted up properly and that they send result back to the same address
@@ -75,8 +78,8 @@ validator {
             vote_results: all_results,
             new_iteration: new_iteration,
           )
-        let result_with_hash =
-          ResultsBatchDatum { ..result, batch_hash: batch_hash }
+        let on_chain_results =
+          ResultsBatchDatum { ..result, batch_hash: off_chain_batch_hash }
         list.and(
           [
             validators.any_output_contains_own_validator_address(
@@ -84,8 +87,8 @@ validator {
               outputs,
               output_reference,
             )?,
-            validate_results(all_results, batch_hash)?,
-            results_must_match(sc.transaction.outputs, result_with_hash)?,
+            validate_results(all_results, off_chain_batch_hash)?,
+            results_must_match(sc.transaction.outputs, on_chain_results)?,
           ],
         )
       }
@@ -119,8 +122,8 @@ fn results_must_match(
           results: off_chain_results_dict,
         }
 
-      trace append_string(@"off_results:", cbor.diagnostic(off_chain_results))
       trace append_string(@"on_results:", cbor.diagnostic(on_chain_results))
+      trace append_string(@"off_results:", cbor.diagnostic(off_chain_results))
 
       off_chain_results == on_chain_results
     }
@@ -129,12 +132,15 @@ fn results_must_match(
     |> list.any(result_checker)
 }
 
-fn validate_votes(votes: List<Vote>, batch_hash: Hash<Sha2_256, Vote>) -> Bool {
+fn validate_votes(
+  on_chain_votes: List<Vote>,
+  batch_hash: Hash<Sha2_256, Vote>,
+) -> Bool {
   let hash_fn =
     fn(v: Vote) { sha2_256(builtin.serialise_data(v)) }
 
   let hashed_list =
-    hashed_list.from(votes, hash_fn)
+    hashed_list.from(on_chain_votes, hash_fn)
 
   let on_chain_batch_hash =
     hashed_list.hash
@@ -143,19 +149,19 @@ fn validate_votes(votes: List<Vote>, batch_hash: Hash<Sha2_256, Vote>) -> Bool {
 }
 
 fn validate_results(
-  results: List<ResultsBatchDatum>,
-  batch_hash: Hash<Sha2_256, ResultsBatchDatum>,
+  on_chain_results: List<ResultsBatchDatum>,
+  off_chain_batch_hash: Hash<Sha2_256, ResultsBatchDatum>,
 ) -> Bool {
   let hash_fn =
     fn(r: ResultsBatchDatum) { sha2_256(builtin.serialise_data(r)) }
 
   let hashed_list =
-    hashed_list.from(results, hash_fn)
+    hashed_list.from(on_chain_results, hash_fn)
 
   let on_chain_batch_hash =
     hashed_list.hash
 
-  batch_hash == on_chain_batch_hash
+  off_chain_batch_hash == on_chain_batch_hash
 }
 
 fn get_votes_from_inputs(inputs: List<Input>) -> List<Vote> {
@@ -219,7 +225,7 @@ fn count_vote_results(
       batch_hash: #"",
     }
 
-  list.reduce(vote_results, merging_fn, zero)
+  list.foldl(vote_results, merging_fn, zero)
 }
 
 fn do_count_votes(
@@ -231,7 +237,7 @@ fn do_count_votes(
       acc
     [h, ..t] -> {
       let fv: FlatVote =
-        to_flat_vote(h)
+        vote.to_flat_vote(h)
       let c: Challenge =
         h.challenge
       let p: Proposal =
@@ -269,82 +275,4 @@ fn count_votes(votes: List<Vote>) -> Dict<ChallengeProposal, Result> {
   let empty =
     dict.new()
   do_count_votes(votes, empty)
-}
-
-fn voting_power_for_choice(v: Vote, c: Choice) -> Option<VotingPower> {
-  list.find(
-    [0, 1, 2],
-    fn(choice: Choice) { list.and([v.choice == choice, c == choice]) },
-  )
-    |> option.map(fn(_) { v.voting_power })
-}
-
-fn to_flat_vote(v: Vote) -> FlatVote {
-  let cp =
-    ChallengeProposal { challenge: v.challenge, proposal: v.proposal }
-  let y =
-    voting_power_for_choice(v, 2)
-      |> option.or_else(0)
-  let n =
-    voting_power_for_choice(v, 1)
-      |> option.or_else(0)
-  let a =
-    voting_power_for_choice(v, 0)
-      |> option.or_else(0)
-
-  FlatVote { key: cp, yes: y, no: n, abstain: a }
-}
-
-test to_flat_vote_1() {
-  let v1 =
-    Vote {
-      voter_key: #"01",
-      voting_power: 10,
-      challenge: 1,
-      proposal: 1,
-      choice: 2,
-    }
-
-  to_flat_vote(v1) == FlatVote {
-    key: ChallengeProposal(1, 1),
-    yes: 10,
-    no: 0,
-    abstain: 0,
-  }
-}
-
-test to_flat_vote_2() {
-  let v1 =
-    Vote {
-      voter_key: #"01",
-      voting_power: 10,
-      challenge: 1,
-      proposal: 1,
-      choice: 1,
-    }
-
-  to_flat_vote(v1) == FlatVote {
-    key: ChallengeProposal(1, 1),
-    yes: 0,
-    no: 10,
-    abstain: 0,
-  }
-}
-
-test to_flat_vote_3() {
-  let v1 =
-    Vote {
-      voter_key: #"01",
-      voting_power: 10,
-      challenge: 1,
-      proposal: 1,
-      choice: 0,
-    }
-
-  to_flat_vote(v1) == FlatVote {
-    key: ChallengeProposal(1, 1),
-    yes: 0,
-    no: 0,
-    abstain: 10,
-  }
 }

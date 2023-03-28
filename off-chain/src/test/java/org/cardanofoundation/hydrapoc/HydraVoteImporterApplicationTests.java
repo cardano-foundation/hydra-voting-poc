@@ -59,14 +59,14 @@ class HydraVoteImporterApplicationTests {
         importVotesFromFile();
         System.out.println("creating and posting batches...");
         createAndPostBatch();
-//        System.out.println("reducing batches...");
-//        reduceBatch();
+        System.out.println("reducing batches...");
+        reduceBatch();
     }
 
     //1. Generate 150 votes
     @Test
     public void generateVotes() throws Exception {
-        command.generateVotes(10, 110, "votes.json");
+        command.generateVotes(5, 27, "votes.json");
         var allVotes = randomVoteGenerator.getAllVotes("votes.json");
         System.out.println("Generated unique votes count:" + allVotes.size());
     }
@@ -77,7 +77,7 @@ class HydraVoteImporterApplicationTests {
         //Thread.sleep(1000); //so that all previous messages are consumed from hydra
         var allVotes = randomVoteGenerator.getAllVotes("votes.json");
 
-        var batchSize = 10;
+        var batchSize = 9;
 
         log.info("Starting import of votes, count:" + allVotes.size());
         var partitions = Lists.partition(allVotes, batchSize);
@@ -105,73 +105,56 @@ class HydraVoteImporterApplicationTests {
 
         log.info("Counting votes, count:" + allVotes.size());
 
+        int iteration = 0;
         for (var votesPart : partitions) {
-            if (votesPart.size() == batchSize) {
-                //Thread.sleep(1000);
-                voteBatcher.createAndPostBatchTransaction(batchSize);
-            }
+            //Thread.sleep(1000);
+            log.info("Iteration: {}", iteration);
+            voteBatcher.createAndPostBatchTransaction(batchSize);
+            iteration++;
         }
+
+        //voteBatcher.createAndPostBatchTransaction(2);
 
         log.info("Counting votes completed.");
     }
 
-    // 4. Reduce batch of 20 to 1
+    // 4. Reduce batch of 4 to 1
     // Run this test multiple times to reduce batches to 1 batch
     @Test
     public void reduceBatch() throws Exception {
         //Thread.sleep(5000);
 
-        voteBatchReducer.postReduceBatchTransaction(5, 1);
-        voteBatchReducer.postReduceBatchTransaction(5, 1);
-        voteBatchReducer.postReduceBatchTransaction(5, 1);
-        voteBatchReducer.postReduceBatchTransaction(5, 1);
-        voteBatchReducer.postReduceBatchTransaction(5, 1);
+        voteBatchReducer.postReduceBatchTransaction(3, 0);
+        voteBatchReducer.postReduceBatchTransaction(3, 0);
+        voteBatchReducer.postReduceBatchTransaction(3, 0);
 
-//        voteBatchReducer.postReduceBatchTransaction(5, 0);
-//        voteBatchReducer.postReduceBatchTransaction(5, 0);
-//        voteBatchReducer.postReduceBatchTransaction(5, 0);
-//        voteBatchReducer.postReduceBatchTransaction(5, 0);
-//        voteBatchReducer.postReduceBatchTransaction(5, 0);
-//        voteBatchReducer.postReduceBatchTransaction(5, 0);
-//        voteBatchReducer.postReduceBatchTransaction(5, 0);
-//        voteBatchReducer.postReduceBatchTransaction(5, 0);
-//        voteBatchReducer.postReduceBatchTransaction(5, 0);
-//
-//        voteBatchReducer.postReduceBatchTransaction(5, 1);
-//        voteBatchReducer.postReduceBatchTransaction(5, 1);
+        //voteBatchReducer.postReduceBatchTransaction(3, 1);
 
 //        var allVotes = randomVoteGenerator.getAllVotes("votes.json");
-//        var size = Double.valueOf(Math.ceil((double) allVotes.size() / batchSize)).intValue();
+//        int itOneSize = allVotes.size() / 9;
+//        int itTwoSize = itOneSize / 3;
+//        int itThreeSize = itTwoSize / 3;
 //
-//        log.info("Reducing votes results, size:" + size);
-//
-//        for (int i = 0; i < size; i++) {
-//            Thread.sleep(1000);
-//            voteBatchReducer.postReduceBatchTransaction(batchSize, 0);
-//        }
-
-//        voteBatchReducer.postReduceBatchTransaction(5, 0);
-//        voteBatchReducer.postReduceBatchTransaction(5, 0);
-//        voteBatchReducer.postReduceBatchTransaction(5, 0);
-//        voteBatchReducer.postReduceBatchTransaction(5, 0);
-//
-//        voteBatchReducer.postReduceBatchTransaction(4, 1);
-
-//        for (int i = 0; i < size; i++) {
-//            Thread.sleep(100);
-//            voteBatchReducer.postReduceBatchTransaction(batchSize, 0);
+//        log.info("Reduce - processing iteration:{}", 0);
+//        for (int i = 0; i < itOneSize; i++) {
+//            voteBatchReducer.postReduceBatchTransaction(3, 0);
 //        }
 //
-//        Thread.sleep(100);
-//        voteBatchReducer.postReduceBatchTransaction(3, 1);
+//        log.info("Reduce - processing iteration:{}", 1);
+//        for (int i = 0; i < itTwoSize; i++) {
+//            voteBatchReducer.postReduceBatchTransaction(3, 1);
+//        }
 //
-//        Thread.sleep(100);
-//        voteBatchReducer.postReduceBatchTransaction(3, 1);
-//
-//        Thread.sleep(100);
-//        voteBatchReducer.postReduceBatchTransaction(2, 2);
-//
-//        log.info("Reducing votes results completed.");
+//        log.info("Reduce - processing iteration:{}", 2);
+//        for (int i = 0; i < itThreeSize; i++) {
+//            voteBatchReducer.postReduceBatchTransaction(3, 2);
+//        }
+
+    }
+
+    @Test
+    public void reduceFinalBatch() throws Exception {
+        voteBatchReducer.postReduceBatchTransaction(3, 1);
     }
 
     @Test

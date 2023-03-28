@@ -24,7 +24,7 @@ pub type FlatVote {
   abstain: VotingPower,
 }
 
-fn voting_power_for_choice(v: Vote, c: Choice) -> Option<VotingPower> {
+pub fn voting_power_for_choice(v: Vote, c: Choice) -> Option<VotingPower> {
   list.find(
     [0, 1, 2],
     fn(choice: Choice) { list.and([v.choice == choice, c == choice]) },
@@ -32,7 +32,7 @@ fn voting_power_for_choice(v: Vote, c: Choice) -> Option<VotingPower> {
     |> option.map(fn(_) { v.voting_power })
 }
 
-fn to_flat_vote(v: Vote) -> FlatVote {
+pub fn to_flat_vote(v: Vote) -> FlatVote {
   let cp =
     ChallengeProposal { challenge: v.challenge, proposal: v.proposal }
   let y =

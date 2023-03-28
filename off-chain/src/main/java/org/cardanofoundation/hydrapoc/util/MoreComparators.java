@@ -8,7 +8,7 @@ import java.util.function.Function;
 
 public class MoreComparators {
 
-    public static <T> Comparator<Tuple<Utxo, T>> createOrderComparator() {
+    public static <T> Comparator<Tuple<Utxo, T>> createTxHashAndTransactionIndexComparator() {
         return Comparator.comparing((Function<Tuple<Utxo, T>, String>) t -> t._1.getTxHash())
                 .thenComparing(t -> t._1.getOutputIndex());
     }
