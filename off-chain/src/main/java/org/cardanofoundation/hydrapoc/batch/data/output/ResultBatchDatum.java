@@ -20,13 +20,13 @@ public class ResultBatchDatum {
     private Map<ChallengeProposalDatum, ResultDatum> results;
 
     @PlutusField
-    private byte[] merkleRootHash = new byte[0];
+    private byte[] batchHash = new byte[0];
 
     @PlutusField
     private long iteration;
 
     public static ResultBatchDatum empty(long iteration) {
-        return new ResultBatchDatum(new LinkedHashMap<>(), new byte[0], iteration);
+        return new ResultBatchDatum(new HashMap<>(), new byte[0], iteration);
     }
 
     public void add(ChallengeProposalDatum challengeProposal, ResultDatum result) {
@@ -37,11 +37,11 @@ public class ResultBatchDatum {
         return results.get(challengeProposal);
     }
 
-    public void setMerkleRootHash(@Nullable byte[] merkleRootHash) {
-        if (merkleRootHash == null) {
-            this.merkleRootHash = new byte[0];
+    public void setBatchHash(@Nullable byte[] batchHash) {
+        if (batchHash == null) {
+            this.batchHash = new byte[0];
         } else {
-            this.merkleRootHash = merkleRootHash;
+            this.batchHash = batchHash;
         }
     }
 
@@ -59,7 +59,7 @@ public class ResultBatchDatum {
             Iterator<Map.Entry<PlutusData, PlutusData>> entries = resultsPDMap.getMap().entrySet().iterator();
 
             ResultBatchDatum resultBatchDatum = ResultBatchDatum.empty(iterationPD.getValue().longValue());
-            resultBatchDatum.setMerkleRootHash(bytesPD.getValue());
+            resultBatchDatum.setBatchHash(bytesPD.getValue());
 
             while (entries.hasNext()) {
                 Map.Entry<PlutusData, PlutusData> entry = entries.next();

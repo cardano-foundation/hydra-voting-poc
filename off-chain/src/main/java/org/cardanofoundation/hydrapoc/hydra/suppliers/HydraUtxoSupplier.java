@@ -11,8 +11,9 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.NullNode;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import lombok.val;
 import org.cardanofoundation.hydra.client.model.UTXO;
-import org.cardanofoundation.hydra.client.model.query.response.GetUTxOResponse;
 import org.cardanofoundation.hydrapoc.hydra.HydraClient;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Component;
@@ -25,7 +26,9 @@ import java.util.List;
 @Component
 @RequiredArgsConstructor
 @ConditionalOnProperty(prefix = "hydra", name = "ws.url")
+@Slf4j
 public class HydraUtxoSupplier implements UtxoSupplier {
+
     private final HydraClient hydraClient;
 
     @Override
@@ -34,9 +37,9 @@ public class HydraUtxoSupplier implements UtxoSupplier {
             return Collections.EMPTY_LIST;
 
         try {
-            GetUTxOResponse getUTxOResponse = hydraClient.getUTXOs().block(Duration.ofSeconds(10));
+            val getUTxOResponse = hydraClient.getUTXOs().block(Duration.ofSeconds(50));
 
-            return getUTxOResponse.getUtxo().entrySet()
+            val utxos = getUTxOResponse.getUtxo().entrySet()
                     .stream().filter(utxoEntry -> utxoEntry.getValue().getAddress().equals(address))
                     .map(utxoEntry -> new Tuple<String[], UTXO>(StringUtils.split(utxoEntry.getKey(), "#"), utxoEntry.getValue()))
                     .map(tuple -> Utxo.builder()
@@ -50,7 +53,12 @@ public class HydraUtxoSupplier implements UtxoSupplier {
                             .dataHash(tuple._2.getDatumhash())
                             .inlineDatum(convertInlineDatum(tuple._2.getInlineDatum()))
                             .referenceScriptHash(tuple._2.getReferenceScript())
-                            .build()).toList();
+                            .build())
+                    .toList();
+
+            log.info("getUTxOResponse - last Seq:" + getUTxOResponse.getSeq());
+
+            return utxos;
         } catch (Exception e) {
             throw new RuntimeException(e);
         }

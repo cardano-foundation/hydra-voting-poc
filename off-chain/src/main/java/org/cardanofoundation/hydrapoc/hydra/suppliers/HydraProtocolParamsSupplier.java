@@ -17,8 +17,10 @@ import java.util.Map;
 @Component
 @ConditionalOnProperty(prefix = "hydra", name = "ws.url")
 public class HydraProtocolParamsSupplier implements ProtocolParamsSupplier {
+
     private final ObjectMapper mapper = new ObjectMapper();
-    private JsonNode protoParamsJson;
+
+    private final JsonNode protoParamsJson;
 
     public HydraProtocolParamsSupplier() {
         try (InputStream is = getClass().getClassLoader().getResourceAsStream("hydra/protocol-parameters.json")) {
@@ -37,6 +39,8 @@ public class HydraProtocolParamsSupplier implements ProtocolParamsSupplier {
         protocolParams.setMinFeeB(155381);
         protocolParams.setPriceMem(new BigDecimal(protoParamsJson.get("executionUnitPrices").get("priceMemory").asText()));
         protocolParams.setPriceStep(new BigDecimal(protoParamsJson.get("executionUnitPrices").get("priceSteps").asText()));
+        protocolParams.setMaxTxExMem(protoParamsJson.get("maxTxExecutionUnits").get("memory").asText());
+        protocolParams.setMaxTxExSteps(protoParamsJson.get("maxTxExecutionUnits").get("steps").asText());
 
         Map<String, Long> costModel1 = costModelFor("PlutusScriptV1");
         Map<String, Long> costModel2 = costModelFor("PlutusScriptV2");
@@ -49,7 +53,7 @@ public class HydraProtocolParamsSupplier implements ProtocolParamsSupplier {
         JsonNode plutusV2CostJson = protoParamsJson.get("costModels").get(lang);
         Iterator<String> opsIter = plutusV2CostJson.fieldNames();
         Map<String, Long> costModel = new HashMap<>();
-        while(opsIter.hasNext()) {
+        while (opsIter.hasNext()) {
             String op = opsIter.next();
             costModel.put(op, plutusV2CostJson.get(op).asLong());
         }

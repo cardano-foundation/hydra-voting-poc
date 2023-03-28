@@ -6,6 +6,7 @@ Hydra.
 ## Requirements
 
 Java 17
+Aiken with Sha1: 80f2fd746dae3dcfa85b6afbe3b1d1dd1713a89e
 
 ## To build
 

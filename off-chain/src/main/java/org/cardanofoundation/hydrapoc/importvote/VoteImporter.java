@@ -28,6 +28,7 @@ import org.springframework.retry.annotation.Backoff;
 import org.springframework.retry.annotation.Retryable;
 import org.springframework.stereotype.Component;
 
+import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.util.Collection;
 
@@ -37,6 +38,7 @@ import static com.bloxbean.cardano.client.common.ADAConversionUtil.adaToLovelace
 @RequiredArgsConstructor
 @Slf4j
 public class VoteImporter {
+
     private final UtxoSupplier utxoSupplier;
     private final ProtocolParamsSupplier protocolParamsSupplier;
     private final TransactionProcessor transactionProcessor;
@@ -44,7 +46,7 @@ public class VoteImporter {
     private final TransactionUtil transactionUtil;
     private final PlutusScriptUtil plutusScriptUtil;
 
-    private PlutusObjectConverter plutusObjectConverter = new DefaultPlutusObjectConverter();
+    private final static PlutusObjectConverter plutusObjectConverter = new DefaultPlutusObjectConverter();
 
     @Retryable(include = {RuntimeException.class},
             maxAttempts = 3,
@@ -80,7 +82,7 @@ public class VoteImporter {
                         .address(voteBatchContractAddress)
                         .value(Value
                                 .builder()
-                                .coin(adaToLovelace(1))
+                                .coin(adaToLovelace(BigDecimal.ZERO))
                                 .build()
                         )
                         .inlineDatum(datum)
@@ -109,7 +111,10 @@ public class VoteImporter {
         else
             log.info("Import Transaction Id : " + result.getValue());
 
+        log.info("Fee:{} lovelaces", transaction.getBody().getFee());
+
         transactionUtil.waitForTransaction(result);
+
         return result.getValue();
     }
 

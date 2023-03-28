@@ -21,7 +21,7 @@ public class RandomVoteGenerator {
     @Value("${proposals.per.challenge:100}")
     private int nRandomProposal;
 
-    @Value("${total.challenges:20}")
+    @Value("${total.challenges:200}")
     private int nChallenges;
 
     RandomPublicKeyGenerator randomPublicKeyGenerator = new RandomPublicKeyGenerator();

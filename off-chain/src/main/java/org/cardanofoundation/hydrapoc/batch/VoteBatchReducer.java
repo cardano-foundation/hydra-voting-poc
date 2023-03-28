@@ -16,7 +16,6 @@ import com.bloxbean.cardano.client.plutus.api.PlutusObjectConverter;
 import com.bloxbean.cardano.client.plutus.impl.DefaultPlutusObjectConverter;
 import com.bloxbean.cardano.client.transaction.spec.CostMdls;
 import com.bloxbean.cardano.client.transaction.spec.ExUnits;
-import com.bloxbean.cardano.client.transaction.spec.Language;
 import com.bloxbean.cardano.client.transaction.spec.RedeemerTag;
 import com.bloxbean.cardano.client.transaction.util.CostModelUtil;
 import com.bloxbean.cardano.client.util.JsonUtil;
@@ -28,20 +27,21 @@ import org.cardanofoundation.hydrapoc.commands.PlutusScriptUtil;
 import org.cardanofoundation.hydrapoc.commands.TransactionUtil;
 import org.cardanofoundation.hydrapoc.common.BalanceUtil;
 import org.cardanofoundation.hydrapoc.common.OperatorAccountProvider;
-import org.cardanofoundation.merkle.core.MerkleTree;
+import org.cardanofoundation.list.HashedList;
 import org.springframework.retry.annotation.Backoff;
 import org.springframework.retry.annotation.Retryable;
 import org.springframework.stereotype.Component;
 
 import java.math.BigInteger;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.Optional;
 
 import static com.bloxbean.cardano.client.common.ADAConversionUtil.adaToLovelace;
 import static com.bloxbean.cardano.client.common.CardanoConstants.LOVELACE;
+import static com.bloxbean.cardano.client.transaction.spec.Language.PLUTUS_V2;
+import static java.util.Collections.emptySet;
 import static org.cardanofoundation.hydrapoc.batch.util.CountVoteUtil.groupResultBatchDatum;
-import static org.cardanofoundation.merkle.util.Hashing.sha2_256;
+import static org.cardanofoundation.util.Hashing.sha2_256;
 
 @Component
 @RequiredArgsConstructor
@@ -70,20 +70,21 @@ public class VoteBatchReducer {
         log.info("Script Address: " + voteBatcherScriptAddress);
 
         val utxoTuples = voteUtxoFinder.getUtxosWithVoteBatches(batchSize, fromIteration);
+
         if (utxoTuples.size() == 0) {
             log.warn("No utxo found");
             return Optional.empty();
         }
 
         val results = utxoTuples.stream().map(t -> t._2).toList();
-        val mt = MerkleTree.createFromItems(results, r -> {
+        val mt = HashedList.create(results, r -> {
             return sha2_256(plutusObjectConverter.toPlutusData(r).serializeToBytes());
         });
-        val merkleTreeRootHash = mt.elementHash();
+        val batchHash = mt.hash();
 
         // Calculate group result batch datum
         val reduceVoteBatchDatum = groupResultBatchDatum(results, fromIteration + 1);
-        reduceVoteBatchDatum.setMerkleRootHash(mt.elementHash());
+        reduceVoteBatchDatum.setBatchHash(batchHash);
 
         log.info("############# Input Vote Batches ############");
         log.info(JsonUtil.getPrettyJson(results));
@@ -92,7 +93,7 @@ public class VoteBatchReducer {
 
         // Build and post contract txn
         val utxoSelectionStrategy = new LargestFirstUtxoSelectionStrategy(utxoSupplier);
-        val collateralUtxos = utxoSelectionStrategy.select(sender, new Amount(LOVELACE, adaToLovelace(1000)), Collections.emptySet());
+        val collateralUtxos = utxoSelectionStrategy.select(sender, new Amount(LOVELACE, adaToLovelace(1)), emptySet());
 
         // Build the expected output
         val outputDatum = plutusObjectConverter.toPlutusData(reduceVoteBatchDatum);
@@ -115,7 +116,7 @@ public class VoteBatchReducer {
                         .mem(BigInteger.valueOf(0))
                         .steps(BigInteger.valueOf(0))
                         .build())
-                .redeemer(plutusObjectConverter.toPlutusData(ReduceVoteBatchRedeemer.create(merkleTreeRootHash, fromIteration)))
+                .redeemer(plutusObjectConverter.toPlutusData(ReduceVoteBatchRedeemer.create(batchHash, fromIteration)))
                 .redeemerTag(RedeemerTag.Spend).build())
                 .toList();
 
@@ -129,8 +130,9 @@ public class VoteBatchReducer {
 
         txBuilder = txBuilder.andThen((context, txn) -> {
                     val txEvaluator = new TxEvaluator();
+                    val costModel = CostModelUtil.getCostModelFromProtocolParams(protocolParamsSupplier.getProtocolParams(), PLUTUS_V2).orElseThrow();
                     val costMdls = new CostMdls();
-                    costMdls.add(CostModelUtil.getCostModelFromProtocolParams(protocolParamsSupplier.getProtocolParams(), Language.PLUTUS_V2).orElseThrow());
+                    costMdls.add(costModel);
 
                     val evalReedemers = txEvaluator.evaluateTx(txn, context.getUtxos(), costMdls);
 
