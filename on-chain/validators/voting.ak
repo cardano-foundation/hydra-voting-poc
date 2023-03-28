@@ -1,8 +1,9 @@
 use acca/collections/hashed_list
 use acca/datums as adatums
-use acca/ordering as aordering
+use acca/dict as adict
 use acca/validators
 use aiken/builtin.{append_string}
+use aiken/cbor
 use aiken/dict.{Dict}
 use aiken/hash.{Hash, Sha2_256, sha2_256}
 use aiken/list
@@ -47,7 +48,7 @@ validator {
           get_votes_from_inputs(inputs)
         let results: Dict<ChallengeProposal, Result> =
           count_votes(votes)
-        let result_with_hash =
+        let on_chain_results_datum =
           ResultsBatchDatum { results, iteration: 0, batch_hash }
         list.and(
           [
@@ -57,12 +58,10 @@ validator {
               outputs,
               output_reference,
             )?,
+            results_must_match(sc.transaction.outputs, on_chain_results_datum)?,
           ],
         )
       }
-      //
-      //results_must_match(sc.transaction.outputs, result_with_hash)?,
-      // ,
       ReduceResults { batch_hash, iteration } -> {
         // collect results from all inputs (fail if there are still votes in smart contract)
         // take existing results and compress them, into one
@@ -105,20 +104,32 @@ fn results_must_match(
       expect InlineDatum(off_chain_results_data) =
         o.datum
 
-      expect off_chain_results_datum: ResultsBatchDatum =
+      expect unsorted_off_chain_results: ResultsBatchDatum =
         off_chain_results_data
 
-      let ord =
-        results_batch_datum.compare(
-          off_chain_results_datum,
-          on_chain_results_datum,
+      let off_chain_results_dict =
+        adict.sort(
+          unsorted_off_chain_results.results,
+          challenge_proposal.compare,
         )
 
-      trace append_string(@"Comparison:", aordering.to_string(ord))
+      let off_chain_results =
+        ResultsBatchDatum {
+          ..unsorted_off_chain_results,
+          results: off_chain_results_dict,
+        }
 
-      ord == Equal
+      trace append_string(@"off_results:", cbor.diagnostic(off_chain_results))
+      trace append_string(
+        @"on_results:",
+        cbor.diagnostic(on_chain_results_datum),
+      )
+
+      off_chain_results == on_chain_results_datum
     }
 
+  // trace append_string(@"Comparison:", aordering.to_string(ord))
+  // ord == Equal
   list.filter(outputs, adatums.is_inline_datum)
     |> list.any(result_checker)
 }
