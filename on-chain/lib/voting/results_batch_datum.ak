@@ -17,7 +17,7 @@ pub fn compare(left: ResultsBatchDatum, right: ResultsBatchDatum) -> Ordering {
   aordering.force_reduce(
     [
       int.compare(left.iteration, right.iteration),
-      //bytearray.compare(left.batch_hash, right.batch_hash),
+      bytearray.compare(left.batch_hash, right.batch_hash),
       compare_results(left.results, right.results),
     ],
   )

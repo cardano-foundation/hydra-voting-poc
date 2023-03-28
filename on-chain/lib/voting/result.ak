@@ -9,7 +9,7 @@ pub type Result {
   abstain: VotingPower,
 }
 
-pub fn compare(left: Result, right: Result) {
+pub fn compare(left: Result, right: Result) -> Ordering {
   let equal =
     list.and(
       [

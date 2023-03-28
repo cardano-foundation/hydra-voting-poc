@@ -97,7 +97,7 @@ validator {
 
 fn results_must_match(
   outputs: List<Output>,
-  on_chain_results_datum: ResultsBatchDatum,
+  on_chain_results: ResultsBatchDatum,
 ) -> Bool {
   let result_checker =
     fn(o: Output) {
@@ -120,16 +120,11 @@ fn results_must_match(
         }
 
       trace append_string(@"off_results:", cbor.diagnostic(off_chain_results))
-      trace append_string(
-        @"on_results:",
-        cbor.diagnostic(on_chain_results_datum),
-      )
+      trace append_string(@"on_results:", cbor.diagnostic(on_chain_results))
 
-      off_chain_results == on_chain_results_datum
+      off_chain_results == on_chain_results
     }
 
-  // trace append_string(@"Comparison:", aordering.to_string(ord))
-  // ord == Equal
   list.filter(outputs, adatums.is_inline_datum)
     |> list.any(result_checker)
 }
@@ -224,7 +219,7 @@ fn count_vote_results(
       batch_hash: #"",
     }
 
-  list.foldl(vote_results, merging_fn, zero)
+  list.reduce(vote_results, merging_fn, zero)
 }
 
 fn do_count_votes(
