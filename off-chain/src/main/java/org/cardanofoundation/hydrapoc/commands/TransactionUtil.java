@@ -3,7 +3,6 @@ package org.cardanofoundation.hydrapoc.commands;
 import com.bloxbean.cardano.client.api.model.Result;
 import com.bloxbean.cardano.client.backend.api.TransactionService;
 import com.bloxbean.cardano.client.backend.model.TransactionContent;
-import com.bloxbean.cardano.client.util.JsonUtil;
 import lombok.RequiredArgsConstructor;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
 import org.springframework.stereotype.Component;
@@ -28,7 +27,6 @@ public class TransactionUtil {
                 while (count < 180) {
                     Result<TransactionContent> txnResult = transactionService.getTransaction(result.getValue());
                     if (txnResult.isSuccessful()) {
-                        System.out.println(JsonUtil.getPrettyJson(txnResult.getValue()));
                         break;
                     } else {
                         System.out.println("Waiting for transaction to be processed ....");

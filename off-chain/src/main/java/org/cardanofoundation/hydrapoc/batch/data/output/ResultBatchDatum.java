@@ -22,11 +22,8 @@ public class ResultBatchDatum {
     @PlutusField
     private byte[] batchHash = new byte[0];
 
-    @PlutusField
-    private long iteration;
-
-    public static ResultBatchDatum empty(long iteration) {
-        return new ResultBatchDatum(new HashMap<>(), new byte[0], iteration);
+    public static ResultBatchDatum empty() {
+        return new ResultBatchDatum(new HashMap<>(), new byte[0]);
     }
 
     public void add(ChallengeProposalDatum challengeProposal, ResultDatum result) {
@@ -49,16 +46,16 @@ public class ResultBatchDatum {
         try {
             ConstrPlutusData constr = (ConstrPlutusData) PlutusData.deserialize(datum);
             List<PlutusData> list = constr.getData().getPlutusDataList();
-            if (list.size() == 0)
-                return Optional.of(ResultBatchDatum.empty(-1)); // TODO iteration -1?
+            if (list.size() == 0) {
+                return Optional.of(ResultBatchDatum.empty());
+            }
 
             MapPlutusData resultsPDMap = (MapPlutusData) list.get(0);
             BytesPlutusData bytesPD = (BytesPlutusData) list.get(1);
-            BigIntPlutusData iterationPD = (BigIntPlutusData) list.get(2);
 
             Iterator<Map.Entry<PlutusData, PlutusData>> entries = resultsPDMap.getMap().entrySet().iterator();
 
-            ResultBatchDatum resultBatchDatum = ResultBatchDatum.empty(iterationPD.getValue().longValue());
+            ResultBatchDatum resultBatchDatum = ResultBatchDatum.empty();
             resultBatchDatum.setBatchHash(bytesPD.getValue());
 
             while (entries.hasNext()) {

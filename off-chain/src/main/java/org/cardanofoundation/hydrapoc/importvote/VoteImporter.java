@@ -106,12 +106,9 @@ public class VoteImporter {
                 .buildAndSign(txBuilder, operatorAccountProvider.getTxSigner());
 
         Result<String> result = transactionProcessor.submitTransaction(transaction.serialize());
-        if (!result.isSuccessful())
+        if (!result.isSuccessful()) {
             throw new RuntimeException("Transaction failed. " + result.getResponse());
-        else
-            log.info("Import Transaction Id : " + result.getValue());
-
-        log.info("Fee:{} lovelaces", transaction.getBody().getFee());
+        }
 
         transactionUtil.waitForTransaction(result);
 

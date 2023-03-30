@@ -7,8 +7,8 @@ import java.util.List;
 
 public class CountVoteUtil {
 
-    public static ResultBatchDatum groupResultBatchDatum(List<ResultBatchDatum> resultBatchData, long iteration) {
-        ResultBatchDatum groupResultBatchDatum = ResultBatchDatum.empty(iteration);
+    public static ResultBatchDatum groupResultBatchDatum(List<ResultBatchDatum> resultBatchData) {
+        ResultBatchDatum groupResultBatchDatum = ResultBatchDatum.empty();
 
         for (ResultBatchDatum resultBatchDatum : resultBatchData) {
             resultBatchDatum.getResults().forEach((challengeProposalDatum, resultDatum) -> {

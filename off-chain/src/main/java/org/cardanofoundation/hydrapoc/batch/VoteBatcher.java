@@ -4,6 +4,7 @@ import com.bloxbean.cardano.client.api.ProtocolParamsSupplier;
 import com.bloxbean.cardano.client.api.TransactionProcessor;
 import com.bloxbean.cardano.client.api.UtxoSupplier;
 import com.bloxbean.cardano.client.api.model.Amount;
+import com.bloxbean.cardano.client.api.model.Utxo;
 import com.bloxbean.cardano.client.coinselection.impl.LargestFirstUtxoSelectionStrategy;
 import com.bloxbean.cardano.client.function.Output;
 import com.bloxbean.cardano.client.function.TxBuilderContext;
@@ -33,9 +34,12 @@ import org.springframework.retry.annotation.Backoff;
 import org.springframework.retry.annotation.Retryable;
 import org.springframework.stereotype.Component;
 
+import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.util.ArrayList;
+import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 import java.util.function.Function;
 
 import static com.bloxbean.cardano.client.common.ADAConversionUtil.adaToLovelace;
@@ -77,7 +81,7 @@ public class VoteBatcher {
             return Optional.empty();
         }
 
-        val resultBatchDatum = ResultBatchDatum.empty(0);
+        val resultBatchDatum = ResultBatchDatum.empty();
         val voteDatums = new ArrayList<>();
 
         for (val tuple : utxoTuples) {
@@ -107,9 +111,9 @@ public class VoteBatcher {
             }
         }
 
-        log.info("############# Input Votes ############");
-        log.info(JsonUtil.getPrettyJson(utxoTuples.stream().map(utxoVoteDatumTuple -> utxoVoteDatumTuple._2).toList()));
-        log.info("########### Result Datum #############");
+//        log.info("############# Input Votes ############");
+//        log.info(JsonUtil.getPrettyJson(utxoTuples.stream().map(utxoVoteDatumTuple -> utxoVoteDatumTuple._2).toList()));
+//        log.info("########### Result Datum #############");
 
         Function<Object, byte[]> hash_fn = vote -> sha2_256(plutusObjectConverter.toPlutusData(vote).serializeToBytes());
         val hashedList = HashedList.create(voteDatums, hash_fn);
@@ -137,8 +141,15 @@ public class VoteBatcher {
         val scriptUtxos = utxoTuples.stream().map(utxoVoteDatumTuple -> utxoVoteDatumTuple._1)
                 .toList();
 
+        val extraInputs = utxoSelectionStrategy.select(sender, new Amount(LOVELACE, adaToLovelace(2)), Set.of());
+
+        List<Utxo> allInputs = new ArrayList<>();
+        allInputs.addAll(scriptUtxos);
+        allInputs.addAll(extraInputs);
+
         var txBuilder = output.outputBuilder()
-                .buildInputs(InputBuilders.createFromUtxos(scriptUtxos, sender))
+                .buildInputs(InputBuilders.createFromUtxos(allInputs, sender))
+                //.andThen(output2.outputBuilder().buildInputs(InputBuilders.createFromSender(sender, sender)))
                 .andThen(CollateralBuilders.collateralOutputs(sender, new ArrayList<>(collateralUtxos))); // CIP-40
 
         val scriptCallContexts = scriptUtxos.stream().map(utxo -> ScriptCallContext

@@ -15,19 +15,13 @@ public class ReduceVoteBatchRedeemer {
     @PlutusField
     private byte[] batchHash;
 
-    @PlutusField
-    private long iteration;
-
-    public static ReduceVoteBatchRedeemer create(byte[] batchHash, long iteration) {
+    public static ReduceVoteBatchRedeemer create(byte[] batchHash) {
         if (batchHash.length != 32) {
             throw new IllegalArgumentException("Doesn't seem like a valid SHA2-256 hash");
         }
-        if (iteration < 0) {
-            throw new IllegalArgumentException("iteration cannot be negative");
-        }
 
         try {
-            return new ReduceVoteBatchRedeemer(batchHash, iteration);
+            return new ReduceVoteBatchRedeemer(batchHash);
         } catch (Exception e) {
             throw new RuntimeException("Create failed", e);
         }
