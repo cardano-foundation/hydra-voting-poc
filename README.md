@@ -1,7 +1,5 @@
 # Hydra for Voting Proof-of-Concept
 
-[![Discord](https://dcbadge.vercel.app/api/server/KQJWrYkC)](https://discord.gg/KQJWrYkC)
-
 Check [Project Charter](./docs/project-charter.md) for details about this project
 
 ![image](https://user-images.githubusercontent.com/335933/219307601-7c5fc745-c19e-489b-a63e-586fd8ee8e8d.png)
