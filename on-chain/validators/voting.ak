@@ -1,9 +1,7 @@
 use acca/collections/hashed_list
 use acca/datums as adatums
-use acca/dict as adict
 use acca/validators
-use aiken/builtin.{append_string}
-use aiken/cbor
+use aiken/builtin
 use aiken/dict.{Dict}
 use aiken/hash.{Hash, Sha2_256, sha2_256}
 use aiken/list
@@ -18,12 +16,9 @@ type VotingDatum {
 }
 
 type Redeemer {
-  // Approve { batch_hash: MerkleTree<Vote> }
+  // Approve { batch_hash }
   CreateVoteBatch { off_chain_batch_hash: Hash<Sha2_256, Vote> }
-  ReduceResults {
-    off_chain_batch_hash: Hash<Sha2_256, ResultsBatchDatum>,
-    iteration: Int,
-  }
+  ReduceResults { off_chain_batch_hash: Hash<Sha2_256, ResultsBatchDatum> }
 }
 
 validator {
@@ -47,11 +42,44 @@ validator {
           get_votes_from_inputs(inputs)
         let results: Dict<ChallengeProposal, Result> =
           count_votes(votes)
-        let on_chain_results =
+        let on_chain_hash =
+          get_votes_hash(votes)
+        let on_chain_results_with_hash =
+          ResultsBatchDatum { results, batch_hash: on_chain_hash }
+        let hashes_match =
+          (off_chain_batch_hash == on_chain_hash)?
+        list.and(
+          [
+            hashes_match,
+            validators.any_output_contains_own_validator_address(
+              inputs,
+              outputs,
+              output_reference,
+            )?,
+            output_contains_final_result(
+              sc.transaction.outputs,
+              on_chain_results_with_hash,
+            )?,
+          ],
+        )
+      }
+      ReduceResults { off_chain_batch_hash } -> {
+        // collect results from all inputs (fail if there are still votes in smart contract)
+        // take existing results and compress them, into one
+        // check if resulting output datum contains votes counted up properly and that they send result back to the same address
+        let on_chain_results: List<ResultsBatchDatum> =
+          get_vote_results_from_inputs(inputs)
+        let counted_on_chain_results: Dict<ChallengeProposal, Result> =
+          count_vote_results(on_chain_results)
+        // this is not a mistake that we are passing here off-chain hash
+        // this is onchain data structure but hash verification is in a differrent step
+        // for this we have validate_results function
+        let on_chain_results_hash =
+          get_vote_results_hash(on_chain_results)
+        let on_chain_results_with_hash =
           ResultsBatchDatum {
-            results,
-            iteration: 0,
-            batch_hash: off_chain_batch_hash,
+            results: counted_on_chain_results,
+            batch_hash: on_chain_results_hash,
           }
         list.and(
           [
@@ -60,35 +88,11 @@ validator {
               outputs,
               output_reference,
             )?,
-            validate_votes(votes, off_chain_batch_hash)?,
-            results_must_match(sc.transaction.outputs, on_chain_results)?,
-          ],
-        )
-      }
-      ReduceResults { off_chain_batch_hash, iteration } -> {
-        // collect results from all inputs (fail if there are still votes in smart contract)
-        // take existing results and compress them, into one
-        // check if resulting output datum contains votes counted up properly and that they send result back to the same address
-        let new_iteration =
-          iteration + 1
-        let all_results: List<ResultsBatchDatum> =
-          get_vote_results_from_inputs(inputs, iteration)
-        let result: ResultsBatchDatum =
-          count_vote_results(
-            vote_results: all_results,
-            new_iteration: new_iteration,
-          )
-        let on_chain_results =
-          ResultsBatchDatum { ..result, batch_hash: off_chain_batch_hash }
-        list.and(
-          [
-            validators.any_output_contains_own_validator_address(
-              inputs,
-              outputs,
-              output_reference,
+            (off_chain_batch_hash == on_chain_results_hash)?,
+            output_contains_final_result(
+              sc.transaction.outputs,
+              on_chain_results_with_hash,
             )?,
-            validate_results(all_results, off_chain_batch_hash)?,
-            results_must_match(sc.transaction.outputs, on_chain_results)?,
           ],
         )
       }
@@ -98,99 +102,84 @@ validator {
   }
 }
 
-fn results_must_match(
+// checks that one of the outputs contains
+// computed on chain results
+fn output_contains_final_result(
   outputs: List<Output>,
   on_chain_results: ResultsBatchDatum,
 ) -> Bool {
   let result_checker =
-    fn(o: Output) {
-      expect InlineDatum(off_chain_results_data) =
-        o.datum
+    fn(r: ResultsBatchDatum) { r == on_chain_results }
 
-      expect unsorted_off_chain_results: ResultsBatchDatum =
-        off_chain_results_data
+  let mapper =
+    fn(output) {
+      if adatums.is_inline_datum(output) {
+        expect InlineDatum(off_chain_results_data) =
+          output.datum
 
-      let off_chain_results_dict =
-        adict.sort(
-          unsorted_off_chain_results.results,
-          challenge_proposal.compare,
-        )
+        expect off_chain_results: ResultsBatchDatum =
+          off_chain_results_data
 
-      let off_chain_results =
-        ResultsBatchDatum {
-          ..unsorted_off_chain_results,
-          results: off_chain_results_dict,
-        }
-
-      trace append_string(@"on_results:", cbor.diagnostic(on_chain_results))
-      trace append_string(@"off_results:", cbor.diagnostic(off_chain_results))
-
-      off_chain_results == on_chain_results
+        Some(off_chain_results)
+      } else {
+        None
+      }
     }
 
-  list.filter(outputs, adatums.is_inline_datum)
+  list.filter_map(outputs, mapper)
     |> list.any(result_checker)
 }
 
-fn validate_votes(
-  on_chain_votes: List<Vote>,
-  batch_hash: Hash<Sha2_256, Vote>,
-) -> Bool {
+fn get_votes_hash(on_chain_votes: List<Vote>) -> Hash<Sha2_256, Vote> {
   let hash_fn =
     fn(v: Vote) { sha2_256(builtin.serialise_data(v)) }
 
   let hashed_list =
     hashed_list.from(on_chain_votes, hash_fn)
 
-  let on_chain_batch_hash =
-    hashed_list.hash
-
-  on_chain_batch_hash == batch_hash
+  hashed_list.hash
 }
 
-fn validate_results(
+fn get_vote_results_hash(
   on_chain_results: List<ResultsBatchDatum>,
-  off_chain_batch_hash: Hash<Sha2_256, ResultsBatchDatum>,
-) -> Bool {
+) -> Hash<sha2_256, ResultsBatchDatum> {
   let hash_fn =
     fn(r: ResultsBatchDatum) { sha2_256(builtin.serialise_data(r)) }
 
   let hashed_list =
     hashed_list.from(on_chain_results, hash_fn)
 
-  let on_chain_batch_hash =
-    hashed_list.hash
-
-  off_chain_batch_hash == on_chain_batch_hash
+  hashed_list.hash
 }
 
 fn get_votes_from_inputs(inputs: List<Input>) -> List<Vote> {
-  list.map(
+  list.filter_map(
     inputs,
     fn(input) {
-      expect InlineDatum(vote_data) =
-        input.output.datum
-      expect vote: Vote =
-        vote_data
+      if adatums.is_inline_datum(input.output) {
+        expect InlineDatum(vote_data) =
+          input.output.datum
+        expect vote: Vote =
+          vote_data
 
-      vote
+        Some(vote)
+      } else {
+        None
+      }
     },
   )
 }
 
-// get vote results but only for this iteration
-fn get_vote_results_from_inputs(
-  inputs: List<Input>,
-  iteration: Int,
-) -> List<ResultsBatchDatum> {
+fn get_vote_results_from_inputs(inputs: List<Input>) -> List<ResultsBatchDatum> {
   list.filter_map(
     inputs,
     fn(input) {
-      expect InlineDatum(vote_results_data) =
-        input.output.datum
-      expect results_data_datum: ResultsBatchDatum =
-        vote_results_data
-      if results_data_datum.iteration == iteration {
+      if adatums.is_inline_datum(input.output) {
+        expect InlineDatum(vote_results_data) =
+          input.output.datum
+        expect results_data_datum: ResultsBatchDatum =
+          vote_results_data
+
         Some(results_data_datum)
       } else {
         None
@@ -200,32 +189,22 @@ fn get_vote_results_from_inputs(
 }
 
 fn count_vote_results(
-  vote_results: List<ResultsBatchDatum>,
-  new_iteration: Int,
-) -> ResultsBatchDatum {
+  on_chain_results: List<ResultsBatchDatum>,
+) -> Dict<ChallengeProposal, Result> {
   let merging_fn =
-    fn(rd1: ResultsBatchDatum, rd2: ResultsBatchDatum) {
-      ResultsBatchDatum {
-        results: dict.union_with(
-          left: rd1.results,
-          right: rd2.results,
-          with: results_conflict_resolver,
-          compare: challenge_proposal.compare,
-        ),
-        iteration: new_iteration,
-        batch_hash: #"",
-      }
+    fn(r1: Dict<ChallengeProposal, Result>, r2: Dict<ChallengeProposal, Result>) {
+      dict.union_with(
+        left: r1,
+        right: r2,
+        with: results_conflict_resolver,
+        compare: challenge_proposal.compare,
+      )
     }
 
-  // assign new iteration
-  let zero =
-    ResultsBatchDatum {
-      results: dict.new(),
-      iteration: new_iteration,
-      batch_hash: #"",
-    }
+  let dict_list_with_results: List<Dict<ChallengeProposal, Result>> =
+    list.map(on_chain_results, fn(rbd) { rbd.results })
 
-  list.foldl(vote_results, merging_fn, zero)
+  list.reduce(dict_list_with_results, merging_fn, dict.new())
 }
 
 fn do_count_votes(

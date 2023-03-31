@@ -5,6 +5,7 @@ import com.bloxbean.cardano.client.api.ProtocolParamsSupplier;
 import com.bloxbean.cardano.client.api.TransactionProcessor;
 import com.bloxbean.cardano.client.api.UtxoSupplier;
 import com.bloxbean.cardano.client.api.model.Amount;
+import com.bloxbean.cardano.client.api.model.Utxo;
 import com.bloxbean.cardano.client.coinselection.impl.LargestFirstUtxoSelectionStrategy;
 import com.bloxbean.cardano.client.function.Output;
 import com.bloxbean.cardano.client.function.TxBuilderContext;
@@ -34,7 +35,9 @@ import org.springframework.stereotype.Component;
 
 import java.math.BigInteger;
 import java.util.ArrayList;
+import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 
 import static com.bloxbean.cardano.client.common.ADAConversionUtil.adaToLovelace;
 import static com.bloxbean.cardano.client.common.CardanoConstants.LOVELACE;
@@ -62,14 +65,14 @@ public class VoteBatchReducer {
     @Retryable(include = {RuntimeException.class},
             maxAttempts = 3,
             backoff = @Backoff(delay = 100))
-    public Optional<String> postReduceBatchTransaction(int batchSize, long fromIteration) throws Exception {
+    public Optional<String> postReduceBatchTransaction(int batchSize) throws Exception {
         val voteBatcherScript = plutusScriptUtil.getVoteBatcherContract();
         val voteBatcherScriptAddress = plutusScriptUtil.getVoteBatcherContractAddress();
         val sender = operatorAccountProvider.getOperatorAddress();
         log.info("Sender Address: " + sender);
         log.info("Script Address: " + voteBatcherScriptAddress);
 
-        val utxoTuples = voteUtxoFinder.getUtxosWithVoteBatches(batchSize, fromIteration);
+        val utxoTuples = voteUtxoFinder.getUtxosWithVoteBatches(batchSize);
 
         if (utxoTuples.size() == 0) {
             log.warn("No utxo found");
@@ -83,13 +86,13 @@ public class VoteBatchReducer {
         val batchHash = mt.hash();
 
         // Calculate group result batch datum
-        val reduceVoteBatchDatum = groupResultBatchDatum(results, fromIteration + 1);
+        val reduceVoteBatchDatum = groupResultBatchDatum(results);
         reduceVoteBatchDatum.setBatchHash(batchHash);
 
-        log.info("############# Input Vote Batches ############");
-        log.info(JsonUtil.getPrettyJson(results));
-        log.info("########### Reduced Result Datum #############");
-        log.info(JsonUtil.getPrettyJson(reduceVoteBatchDatum));
+//        log.info("############# Input Vote Batches ############");
+//        log.info(JsonUtil.getPrettyJson(results));
+//        log.info("########### Reduced Result Datum #############");
+//        log.info(JsonUtil.getPrettyJson(reduceVoteBatchDatum));
 
         // Build and post contract txn
         val utxoSelectionStrategy = new LargestFirstUtxoSelectionStrategy(utxoSupplier);
@@ -97,7 +100,7 @@ public class VoteBatchReducer {
 
         // Build the expected output
         val outputDatum = plutusObjectConverter.toPlutusData(reduceVoteBatchDatum);
-        val output = Output.builder()
+        val output1 = Output.builder()
                 .address(voteBatcherScriptAddress)
                 .datum(outputDatum)
                 .inlineDatum(true)
@@ -105,8 +108,20 @@ public class VoteBatchReducer {
                 .qty(adaToLovelace(1))
                 .build();
 
+//        val output2 = Output.builder()
+//                .address(sender)
+//                .assetName(LOVELACE)
+//                .qty(adaToLovelace(2))
+//                .build();
+
         val scriptUtxos = utxoTuples.stream().map(utxoVoteDatumTuple -> utxoVoteDatumTuple._1)
                 .toList();
+
+        val extraInputs = utxoSelectionStrategy.select(sender, new Amount(LOVELACE, adaToLovelace(2)), Set.of());
+
+        List<Utxo> allInputs = new ArrayList<>();
+        allInputs.addAll(scriptUtxos);
+        allInputs.addAll(extraInputs);
 
         val scriptCallContexts = scriptUtxos.stream().map(utxo -> ScriptCallContext
                 .builder()
@@ -116,12 +131,13 @@ public class VoteBatchReducer {
                         .mem(BigInteger.valueOf(0))
                         .steps(BigInteger.valueOf(0))
                         .build())
-                .redeemer(plutusObjectConverter.toPlutusData(ReduceVoteBatchRedeemer.create(batchHash, fromIteration)))
+                .redeemer(plutusObjectConverter.toPlutusData(ReduceVoteBatchRedeemer.create(batchHash)))
                 .redeemerTag(RedeemerTag.Spend).build())
                 .toList();
 
-        var txBuilder = output.outputBuilder()
-                .buildInputs(InputBuilders.createFromUtxos(scriptUtxos, sender))
+        var txBuilder = output1.outputBuilder()
+                .buildInputs(InputBuilders.createFromUtxos(allInputs, sender))
+                //.andThen(output2.outputBuilder().buildInputs(InputBuilders.createFromSender(sender, sender)))
                 .andThen(CollateralBuilders.collateralOutputs(sender, new ArrayList<>(collateralUtxos))); // CIP-40
 
         for (val scriptCallContext : scriptCallContexts) {

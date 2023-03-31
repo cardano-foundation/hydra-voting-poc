@@ -6,8 +6,8 @@ import org.cardanofoundation.hydrapoc.batch.VoteBatchReducer;
 import org.cardanofoundation.hydrapoc.batch.VoteBatcher;
 import org.cardanofoundation.hydrapoc.batch.VoteUtxoFinder;
 import org.cardanofoundation.hydrapoc.generator.RandomVoteGenerator;
-import org.cardanofoundation.hydrapoc.model.Vote;
 import org.cardanofoundation.hydrapoc.importvote.VoteImporter;
+import org.cardanofoundation.hydrapoc.model.Vote;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.shell.standard.ShellComponent;
 import org.springframework.shell.standard.ShellMethod;
@@ -62,8 +62,8 @@ public class Commands {
     }
 
     @ShellMethod(value = "Reduce Batch")
-    public void reduceBatch(@ShellOption int batchSize, @ShellOption int iteration) throws Exception {
-        voteBatchReducer.postReduceBatchTransaction(batchSize, iteration);
+    public void reduceBatch(@ShellOption int batchSize) throws Exception {
+        voteBatchReducer.postReduceBatchTransaction(batchSize);
     }
 
     @ShellMethod(value = "Get vote utxos")
@@ -77,8 +77,8 @@ public class Commands {
     }
 
     @ShellMethod(value = "Get vote batches")
-    public void getVoteBatches(@ShellOption int nBatch, @ShellOption long iteration) {
-        voteUtxoFinder.getUtxosWithVoteBatches(nBatch, iteration)
+    public void getVoteBatches(@ShellOption int nBatch) {
+        voteUtxoFinder.getUtxosWithVoteBatches(nBatch)
                 .forEach(utxoVoteDatumTuple -> {
                     System.out.println("Utxo: " + utxoVoteDatumTuple._1.getTxHash() + "#" + utxoVoteDatumTuple._1.getOutputIndex());
                     System.out.println("Vote Batch: " + utxoVoteDatumTuple._2);

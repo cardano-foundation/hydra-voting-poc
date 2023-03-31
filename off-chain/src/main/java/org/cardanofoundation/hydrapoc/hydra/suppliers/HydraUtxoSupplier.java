@@ -31,17 +31,22 @@ public class HydraUtxoSupplier implements UtxoSupplier {
 
     private final HydraClient hydraClient;
 
+    // SnapshotConfirmed
+
+    // hydra operator = auto signs it (auto-sign + manual sign)
+
     @Override
     public List<Utxo> getPage(String address, Integer nrOfItems, Integer page, OrderEnum order) {
-        if (page >= 1)
+        if (page >= 1) {
             return Collections.EMPTY_LIST;
+        }
 
         try {
             val getUTxOResponse = hydraClient.getUTXOs().block(Duration.ofSeconds(50));
 
             val utxos = getUTxOResponse.getUtxo().entrySet()
                     .stream().filter(utxoEntry -> utxoEntry.getValue().getAddress().equals(address))
-                    .map(utxoEntry -> new Tuple<String[], UTXO>(StringUtils.split(utxoEntry.getKey(), "#"), utxoEntry.getValue()))
+                    .map(utxoEntry -> new Tuple<>(StringUtils.split(utxoEntry.getKey(), "#"), utxoEntry.getValue()))
                     .map(tuple -> Utxo.builder()
                             .txHash(tuple._1[0])
                             .outputIndex(Integer.parseInt(tuple._1[1]))

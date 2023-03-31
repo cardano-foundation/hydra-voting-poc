@@ -66,7 +66,7 @@ class HydraVoteImporterApplicationTests {
     //1. Generate 150 votes
     @Test
     public void generateVotes() throws Exception {
-        command.generateVotes(5, 27, "votes.json");
+        command.generateVotes(5, 29, "votes.json");
         var allVotes = randomVoteGenerator.getAllVotes("votes.json");
         System.out.println("Generated unique votes count:" + allVotes.size());
     }
@@ -77,7 +77,7 @@ class HydraVoteImporterApplicationTests {
         //Thread.sleep(1000); //so that all previous messages are consumed from hydra
         var allVotes = randomVoteGenerator.getAllVotes("votes.json");
 
-        var batchSize = 9;
+        var batchSize = 2;
 
         log.info("Starting import of votes, count:" + allVotes.size());
         var partitions = Lists.partition(allVotes, batchSize);
@@ -86,34 +86,27 @@ class HydraVoteImporterApplicationTests {
             if (votesPart.size() == batchSize) {
                 //Thread.sleep(1000);
                 voteImporter.importVotes(votesPart);
-            } else {
-                log.info("ignoring the rest.., size:" + votesPart.size());
             }
         }
 
         log.info("Votes imported into smart contract.");
     }
 
-    //3. Create a batch of 3 votes --> 1 result
+    //3. Create a batch of 2 votes --> 1 result
     //Run this test multiple times to create multiple batches
     @Test
     public void createAndPostBatch() throws Exception {
         //Thread.sleep(5000);
         var allVotes = randomVoteGenerator.getAllVotes("votes.json");
-        var batchSize = 3;
+        var batchSize = 2;
         var partitions = Lists.partition(allVotes, batchSize);
 
         log.info("Counting votes, count:" + allVotes.size());
 
-        int iteration = 0;
         for (var votesPart : partitions) {
             //Thread.sleep(1000);
-            log.info("Iteration: {}", iteration);
             voteBatcher.createAndPostBatchTransaction(batchSize);
-            iteration++;
         }
-
-        //voteBatcher.createAndPostBatchTransaction(2);
 
         log.info("Counting votes completed.");
     }
@@ -124,50 +117,15 @@ class HydraVoteImporterApplicationTests {
     public void reduceBatch() throws Exception {
         //Thread.sleep(5000);
 
-        voteBatchReducer.postReduceBatchTransaction(3, 0);
-        voteBatchReducer.postReduceBatchTransaction(3, 0);
-        voteBatchReducer.postReduceBatchTransaction(3, 0);
+        var allVotes = randomVoteGenerator.getAllVotes("votes.json");
+        var itOne = allVotes.size() / 2;
+        var itTwo = allVotes.size() / 2;
 
-        //voteBatchReducer.postReduceBatchTransaction(3, 1);
+        for (int i = 0; i < itTwo; i++) {
+            voteBatchReducer.postReduceBatchTransaction(2);
+        }
 
-//        var allVotes = randomVoteGenerator.getAllVotes("votes.json");
-//        int itOneSize = allVotes.size() / 9;
-//        int itTwoSize = itOneSize / 3;
-//        int itThreeSize = itTwoSize / 3;
-//
-//        log.info("Reduce - processing iteration:{}", 0);
-//        for (int i = 0; i < itOneSize; i++) {
-//            voteBatchReducer.postReduceBatchTransaction(3, 0);
-//        }
-//
-//        log.info("Reduce - processing iteration:{}", 1);
-//        for (int i = 0; i < itTwoSize; i++) {
-//            voteBatchReducer.postReduceBatchTransaction(3, 1);
-//        }
-//
-//        log.info("Reduce - processing iteration:{}", 2);
-//        for (int i = 0; i < itThreeSize; i++) {
-//            voteBatchReducer.postReduceBatchTransaction(3, 2);
-//        }
-
-    }
-
-    @Test
-    public void reduceFinalBatch() throws Exception {
-        voteBatchReducer.postReduceBatchTransaction(3, 1);
-    }
-
-    @Test
-    public void reduceBatch2() throws Exception {
-        Thread.sleep(5000);
-
-        var batchSize = 3;
-
-        log.info("Reducing votes results, batch size:" + batchSize);
-
-        voteBatchReducer.postReduceBatchTransaction(batchSize, 0);
-
-        log.info("Reducing votes results completed.");
+        voteBatchReducer.postReduceBatchTransaction(2);
     }
 
     //The following are additional tests for command line options and other methods
