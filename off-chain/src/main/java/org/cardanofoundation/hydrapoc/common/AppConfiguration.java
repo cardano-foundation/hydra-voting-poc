@@ -5,7 +5,7 @@ import com.bloxbean.cardano.client.api.TransactionProcessor;
 import com.bloxbean.cardano.client.api.UtxoSupplier;
 import com.bloxbean.cardano.client.backend.api.*;
 import com.bloxbean.cardano.client.backend.blockfrost.service.BFBackendService;
-import org.cardanofoundation.hydrapoc.commands.TransactionUtil;
+import org.cardanofoundation.hydrapoc.util.TransactionUtil;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Bean;

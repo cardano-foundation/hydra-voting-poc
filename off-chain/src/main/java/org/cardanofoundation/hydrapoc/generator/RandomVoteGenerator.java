@@ -95,7 +95,8 @@ public class RandomVoteGenerator {
     }
 
     /**
-     * Read votes from a vote json file
+     * Read votes from a vote json file.
+     *
      * @param startIndex start index in vote list
      * @param batchSize no of votes to read
      * @param voteFile vote file
@@ -119,7 +120,8 @@ public class RandomVoteGenerator {
     }
 
     public List<Vote> getAllVotes(String voteFile) throws IOException {
-        return objectMapper.readValue(new File(voteFile), new TypeReference<List<Vote>>() {});
+        return objectMapper.readValue(new File(voteFile), new TypeReference<>() {
+        });
     }
 
     public static void main(String[] args) throws Exception {

@@ -1,4 +1,4 @@
-package org.cardanofoundation.hydrapoc.commands;
+package org.cardanofoundation.hydrapoc.util;
 
 import co.nstant.in.cbor.CborException;
 import co.nstant.in.cbor.model.ByteString;

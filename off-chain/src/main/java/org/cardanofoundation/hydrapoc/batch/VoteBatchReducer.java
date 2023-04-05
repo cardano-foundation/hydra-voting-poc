@@ -1,6 +1,5 @@
 package org.cardanofoundation.hydrapoc.batch;
 
-import com.bloxbean.cardano.aiken.tx.evaluator.TxEvaluator;
 import com.bloxbean.cardano.client.api.ProtocolParamsSupplier;
 import com.bloxbean.cardano.client.api.TransactionProcessor;
 import com.bloxbean.cardano.client.api.UtxoSupplier;
@@ -15,19 +14,17 @@ import com.bloxbean.cardano.client.function.helper.ScriptCallContextProviders;
 import com.bloxbean.cardano.client.function.helper.model.ScriptCallContext;
 import com.bloxbean.cardano.client.plutus.api.PlutusObjectConverter;
 import com.bloxbean.cardano.client.plutus.impl.DefaultPlutusObjectConverter;
-import com.bloxbean.cardano.client.transaction.spec.CostMdls;
 import com.bloxbean.cardano.client.transaction.spec.ExUnits;
 import com.bloxbean.cardano.client.transaction.spec.RedeemerTag;
-import com.bloxbean.cardano.client.transaction.util.CostModelUtil;
 import com.bloxbean.cardano.client.util.JsonUtil;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import lombok.val;
 import org.cardanofoundation.hydrapoc.batch.data.input.ReduceVoteBatchRedeemer;
-import org.cardanofoundation.hydrapoc.commands.PlutusScriptUtil;
-import org.cardanofoundation.hydrapoc.commands.TransactionUtil;
 import org.cardanofoundation.hydrapoc.common.BalanceUtil;
 import org.cardanofoundation.hydrapoc.common.OperatorAccountProvider;
+import org.cardanofoundation.hydrapoc.util.PlutusScriptUtil;
+import org.cardanofoundation.hydrapoc.util.TransactionUtil;
 import org.cardanofoundation.list.HashedList;
 import org.springframework.retry.annotation.Backoff;
 import org.springframework.retry.annotation.Retryable;
@@ -41,7 +38,6 @@ import java.util.Set;
 
 import static com.bloxbean.cardano.client.common.ADAConversionUtil.adaToLovelace;
 import static com.bloxbean.cardano.client.common.CardanoConstants.LOVELACE;
-import static com.bloxbean.cardano.client.transaction.spec.Language.PLUTUS_V2;
 import static java.util.Collections.emptySet;
 import static org.cardanofoundation.hydrapoc.batch.util.CountVoteUtil.groupResultBatchDatum;
 import static org.cardanofoundation.util.Hashing.sha2_256;
@@ -89,14 +85,14 @@ public class VoteBatchReducer {
         val reduceVoteBatchDatum = groupResultBatchDatum(results);
         reduceVoteBatchDatum.setBatchHash(batchHash);
 
-//        log.info("############# Input Vote Batches ############");
-//        log.info(JsonUtil.getPrettyJson(results));
-//        log.info("########### Reduced Result Datum #############");
-//        log.info(JsonUtil.getPrettyJson(reduceVoteBatchDatum));
+        log.info("############# Input Vote Batches ############");
+        log.info(JsonUtil.getPrettyJson(results));
+        log.info("########### Reduced Result Datum #############");
+        log.info(JsonUtil.getPrettyJson(reduceVoteBatchDatum));
 
         // Build and post contract txn
         val utxoSelectionStrategy = new LargestFirstUtxoSelectionStrategy(utxoSupplier);
-        val collateralUtxos = utxoSelectionStrategy.select(sender, new Amount(LOVELACE, adaToLovelace(1)), emptySet());
+        val collateralUtxos = utxoSelectionStrategy.select(sender, new Amount(LOVELACE, adaToLovelace(100)), emptySet());
 
         // Build the expected output
         val outputDatum = plutusObjectConverter.toPlutusData(reduceVoteBatchDatum);
@@ -145,27 +141,30 @@ public class VoteBatchReducer {
         }
 
         txBuilder = txBuilder.andThen((context, txn) -> {
-                    val txEvaluator = new TxEvaluator();
-                    val costModel = CostModelUtil.getCostModelFromProtocolParams(protocolParamsSupplier.getProtocolParams(), PLUTUS_V2).orElseThrow();
-                    val costMdls = new CostMdls();
-                    costMdls.add(costModel);
+                    val protocolParams = protocolParamsSupplier.getProtocolParams();
+                    val utxos = context.getUtxos();
 
-                    val evalReedemers = txEvaluator.evaluateTx(txn, context.getUtxos(), costMdls);
+                    val evalReedemers = PlutusScriptUtil.evaluateExUnits(txn, utxos, protocolParams);
 
                     val redeemers = txn.getWitnessSet().getRedeemers();
-                    for (val redeemer : redeemers) { // Update costs
+                    for (val redeemer : redeemers) { //Update costs
                         evalReedemers.stream().filter(evalReedemer -> evalReedemer.getIndex().equals(redeemer.getIndex()))
                                 .findFirst()
-                                .ifPresent(evalRedeemer -> redeemer.setExUnits(evalRedeemer.getExUnits()));
+                                .ifPresent(evalRedeemer -> {
+                                    redeemer.setExUnits(evalRedeemer.getExUnits());
+                                });
                     }
 
+                    // Remove all scripts from witness and just add one
                     txn.getWitnessSet().getPlutusV2Scripts().clear();
-                    txn.getWitnessSet().getPlutusV2Scripts().add(plutusScriptUtil.getVoteBatcherContract());
+                    txn.getWitnessSet().getPlutusV2Scripts().add(voteBatcherScript);
                 })
                 .andThen(BalanceUtil.balanceTx(sender, 1));
 
         val txBuilderContext = TxBuilderContext.init(utxoSupplier, protocolParamsSupplier);
         val transaction = txBuilderContext.buildAndSign(txBuilder, operatorAccountProvider.getTxSigner());
+
+        log.info("Fee:{}", transaction.getBody().getFee());
 
         val result = transactionProcessor.submitTransaction(transaction.serialize());
         if (!result.isSuccessful()) {
