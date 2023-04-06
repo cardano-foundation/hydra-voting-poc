@@ -49,7 +49,7 @@ public class RandomVoteGenerator {
         log.info("Random voter generation {} - Done", voters.size());
 
         //Generate random challenges + proposal
-        Set<Long> challengeIds = new HashSet<>();
+        Set<Integer> challengeIds = new HashSet<>();
         for (int i =0; i<nChallenges; i++)
             challengeIds.add(RandomUtil.getRandomNumber(12000000, 450000000));
         log.info("Random challenge generation {} - Done", challengeIds.size());
@@ -57,7 +57,7 @@ public class RandomVoteGenerator {
 
         //100 random proposals for every challenge
         List<ChallengeProposal> challengeProposals = new ArrayList<>();
-        for (Long challengeId: challengeIds) {
+        for (Integer challengeId: challengeIds) {
             for (int i=0; i<nRandomProposal; i++) {
                 ChallengeProposal challengeProposal = new ChallengeProposal(challengeId, RandomUtil.getRandomNumber(100000, 6000000));
                 challengeProposals.add(challengeProposal);
@@ -68,8 +68,8 @@ public class RandomVoteGenerator {
         //Generate random votes
         Set<Vote> votes = new HashSet<>();
         for (int i = 0; i< noOfVotes; i++) {
-            int randomVoterIndex = (int) RandomUtil.getRandomNumber(0, voters.size());
-            int randomChallengeIndex = (int) RandomUtil.getRandomNumber(0, challengeProposals.size());
+            int randomVoterIndex = RandomUtil.getRandomNumber(0, voters.size());
+            int randomChallengeIndex = RandomUtil.getRandomNumber(0, challengeProposals.size());
 
             Voter voter = voters.get(randomVoterIndex);
             ChallengeProposal challengeProposal = challengeProposals.get(randomChallengeIndex);
@@ -83,7 +83,7 @@ public class RandomVoteGenerator {
     }
 
     private Choice getRandomChoice() {
-        int randomChoice = (int) RandomUtil.getRandomNumber(0, 3);
+        int randomChoice = RandomUtil.getRandomNumber(0, 3);
         if (randomChoice == 0)
             return Choice.ABSTAIN;
         else if (randomChoice == 1)

@@ -66,6 +66,7 @@ class HydraApplicationTests {
     @Autowired
     private VoteBatchReducer voteBatchReducer;
 
+    // docker-compose exec cardano-node cardano-cli query utxo --testnet-magic 42 --address addr_test1vru2drx33ev6dt8gfq245r5k0tmy7ngqe79va69de9dxkrg09c7d3
     @Test
     public void preInit() throws URISyntaxException, InterruptedException {
         CountDownLatch countDownLatch = new CountDownLatch(3);
@@ -80,15 +81,17 @@ class HydraApplicationTests {
         val hc1 = new HydraWSClient(new URI("ws://dev.cf-hydra-voting-poc.metadata.dev.cf-deployments.org:4001"));
         hc1.setHydraStateEventListener(hydraOpenHandler);
         hc1.setHydraQueryEventListener(response -> {
+            val hydraState = hc1.getHydraState();
+
             if (response instanceof GreetingsResponse) {
                 hc1.init();
             }
             if (response instanceof HeadIsInitializingResponse) {
                 val utxo = new UTXO();
                 utxo.setAddress("addr_test1vru2drx33ev6dt8gfq245r5k0tmy7ngqe79va69de9dxkrg09c7d3");
-                utxo.setValue(Map.of("lovelace", BigInteger.valueOf(100000000000L)));
+                utxo.setValue(Map.of("lovelace", BigInteger.valueOf(500000000000L)));
 
-                hc1.commit("eb05ff7ef8a66b0d385ad4c39eed9443bd5a97cfcd7d85b26ba53c7bee4bff6f#0", utxo);
+                hc1.commit("6352686c4593a4639c5c19178695cc48eb702e017537be6dd847244652aeb325#0", utxo);
             }
         });
         val hc2 = new HydraWSClient(new URI("ws://dev.cf-hydra-voting-poc.metadata.dev.cf-deployments.org:4002"));
@@ -147,7 +150,7 @@ class HydraApplicationTests {
 
         for (var votesPart : partitions) {
             if (votesPart.size() == batchSize) {
-                Thread.sleep(5000);
+                Thread.sleep(1000);
                 voteImporter.importVotes(votesPart);
             }
         }
@@ -162,7 +165,8 @@ class HydraApplicationTests {
         log.info("Batch creation...");
 
         Thread.sleep(5000);
-        var batchSize = 25;
+
+        var batchSize = 10;
 
         var allVotes = randomVoteGenerator.getAllVotes("votes.json");
         var partitions = Lists.partition(allVotes, batchSize);
@@ -186,12 +190,12 @@ class HydraApplicationTests {
     public void reduceBatch() throws Exception {
         log.info("Batch reduction...");
 
-        var batchSize = 10;
+        var batchSize = 5;
         Thread.sleep(5000);
 
         var allVotes = randomVoteGenerator.getAllVotes("votes.json");
 
-        var size = allVotes.size() / 25 / batchSize;
+        var size = allVotes.size() / 10 / batchSize;
 
         for (int i = 0; i < size; i++) {
             Thread.sleep(1000);
@@ -199,9 +203,25 @@ class HydraApplicationTests {
             voteBatchReducer.postReduceBatchTransaction(batchSize);
         }
 
+        voteBatchReducer.postReduceBatchTransaction(batchSize);
+        voteBatchReducer.postReduceBatchTransaction(batchSize);
+        voteBatchReducer.postReduceBatchTransaction(batchSize);
+        voteBatchReducer.postReduceBatchTransaction(batchSize);
 
         log.info("Reducing completed.");
     }
+
+    @Test
+    public void reduceBatch2() throws Exception {
+        log.info("Batch reduction...");
+
+        var batchSize = 10;
+
+        voteBatchReducer.postReduceBatchTransaction(batchSize);
+        Thread.sleep(5000);
+        voteBatchReducer.postReduceBatchTransaction(batchSize);
+    }
+
 
     //The following are additional tests for command line options and other methods
     @Test

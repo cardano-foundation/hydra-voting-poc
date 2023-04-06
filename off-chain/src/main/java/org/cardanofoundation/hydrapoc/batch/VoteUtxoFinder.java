@@ -93,7 +93,7 @@ public class VoteUtxoFinder {
                         return new Tuple<>(utxo, resultBatchDatumOptional.orElse(null));
                     })
                     .filter(utxoOptionalTuple -> utxoOptionalTuple._2 != null)
-                    .sorted(MoreComparators.createTxHashAndTransactionIndexComparator())
+                    .sorted(createTxHashAndTransactionIndexComparator())
                     .toList();
 
             utxos.addAll(utxoTuples);

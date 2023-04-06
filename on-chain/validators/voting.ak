@@ -1,12 +1,10 @@
 use acca/collections/hashed_list
 use acca/datums as adatums
 use acca/validators
-use aiken/builtin.{append_string}
-use aiken/cbor
+use aiken/builtin
 use aiken/dict.{Dict}
 use aiken/hash.{Hash, Sha2_256, sha2_256}
 use aiken/list
-//use aiken/string.{from_int}
 use aiken/transaction.{InlineDatum, Input, Output, ScriptContext, Spend}
 use voting/challenge_proposal.{Challenge, ChallengeProposal, Proposal}
 use voting/result.{Result}
