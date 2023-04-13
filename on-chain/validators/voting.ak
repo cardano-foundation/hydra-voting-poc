@@ -15,11 +15,13 @@ use voting/vote.{FlatVote, Vote}
 type VotingDatum {
 }
 
+// m = 10
 type Redeemer {
-  // Approve { batch_hash }
   CreateVoteBatch { off_chain_batch_hash: Hash<Sha2_256, Vote> }
   ReduceResults { off_chain_batch_hash: Hash<Sha2_256, ResultsBatchDatum> }
 }
+
+// ApproveReduceResults { batch_hash } + contains all signatures of all head operators
 
 validator {
   fn voting(
@@ -69,18 +71,24 @@ validator {
         // check if resulting output datum contains votes counted up properly and that they send result back to the same address
         let on_chain_results: List<ResultsBatchDatum> =
           get_vote_results_from_inputs(inputs)
+
         let counted_on_chain_results: Dict<ChallengeProposal, Result> =
           count_vote_results(on_chain_results)
+
         // this is not a mistake that we are passing here off-chain hash
         // this is onchain data structure but hash verification is in a differrent step
         // for this we have validate_results function
         let on_chain_results_hash =
           get_vote_results_hash(on_chain_results)
+
         let on_chain_results_with_hash =
           ResultsBatchDatum {
             results: counted_on_chain_results,
             batch_hash: on_chain_results_hash,
           }
+        let hashes_match =
+          (off_chain_batch_hash == on_chain_results_hash)?
+
         list.and(
           [
             validators.any_output_contains_own_validator_address(
@@ -88,7 +96,7 @@ validator {
               outputs,
               output_reference,
             )?,
-            (off_chain_batch_hash == on_chain_results_hash)?,
+            hashes_match?,
             output_contains_final_result(
               sc.transaction.outputs,
               on_chain_results_with_hash,
@@ -96,6 +104,7 @@ validator {
           ],
         )
       }
+
       _ ->
         False
     }

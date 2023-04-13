@@ -42,6 +42,7 @@ public class Commands {
         int index = startIndex;
         List<Vote> votes = randomVoteGenerator.getVotes(index, batchSize, voteFile);
         List<String> txIds = new ArrayList<>();
+
         while (votes.size() > 0) {
             Thread.sleep(importInterval);
             log.info("Import from index : " + index);

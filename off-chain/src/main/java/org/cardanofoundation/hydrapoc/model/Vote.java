@@ -15,7 +15,7 @@ import lombok.NoArgsConstructor;
 public class Vote {
     private byte[] voterKey;
     private long votingPower;
-    private long challenge;
-    private long proposal;
+    private int challenge;
+    private int proposal;
     private Choice choice;
 }

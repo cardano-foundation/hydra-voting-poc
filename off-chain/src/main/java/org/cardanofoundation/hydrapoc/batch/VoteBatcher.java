@@ -17,7 +17,6 @@ import com.bloxbean.cardano.client.plutus.impl.DefaultPlutusObjectConverter;
 import com.bloxbean.cardano.client.transaction.spec.ExUnits;
 import com.bloxbean.cardano.client.transaction.spec.RedeemerTag;
 import com.bloxbean.cardano.client.util.HexUtil;
-import com.bloxbean.cardano.client.util.JsonUtil;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import lombok.val;
@@ -25,8 +24,8 @@ import org.cardanofoundation.hydrapoc.batch.data.input.CreateVoteBatchRedeemer;
 import org.cardanofoundation.hydrapoc.batch.data.output.ChallengeProposalDatum;
 import org.cardanofoundation.hydrapoc.batch.data.output.ResultBatchDatum;
 import org.cardanofoundation.hydrapoc.batch.data.output.ResultDatum;
-import org.cardanofoundation.hydrapoc.commands.PlutusScriptUtil;
-import org.cardanofoundation.hydrapoc.commands.TransactionUtil;
+import org.cardanofoundation.hydrapoc.util.PlutusScriptUtil;
+import org.cardanofoundation.hydrapoc.util.TransactionUtil;
 import org.cardanofoundation.hydrapoc.common.BalanceUtil;
 import org.cardanofoundation.hydrapoc.common.OperatorAccountProvider;
 import org.cardanofoundation.list.HashedList;
@@ -34,7 +33,6 @@ import org.springframework.retry.annotation.Backoff;
 import org.springframework.retry.annotation.Retryable;
 import org.springframework.stereotype.Component;
 
-import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.util.ArrayList;
 import java.util.List;
@@ -97,18 +95,12 @@ public class VoteBatcher {
             }
 
             switch (voteDatum.getChoice()) {
-                case 0:
-                    resultDatum.setAbstain(resultDatum.getAbstain() + voteDatum.getVotingPower());
-                    break;
-                case 1:
-                    resultDatum.setNo(resultDatum.getNo() + voteDatum.getVotingPower());
-                    break;
-                case 2:
-                    resultDatum.setYes(resultDatum.getYes() + voteDatum.getVotingPower());
-                    break;
-                default:
-                    log.warn("Invalid vote, " + voteDatum.getChoice());
+                case 0 -> resultDatum.setAbstain(resultDatum.getAbstain() + voteDatum.getVotingPower());
+                case 1 -> resultDatum.setNo(resultDatum.getNo() + voteDatum.getVotingPower());
+                case 2 -> resultDatum.setYes(resultDatum.getYes() + voteDatum.getVotingPower());
+                default -> log.warn("Invalid vote, " + voteDatum.getChoice());
             }
+
         }
 
 //        log.info("############# Input Votes ############");
@@ -120,13 +112,14 @@ public class VoteBatcher {
 
         val batchHash = hashedList.hash();
         resultBatchDatum.setBatchHash(batchHash);
-        log.info("batchHash:" + HexUtil.encodeHexString(batchHash));
 
-        log.info(JsonUtil.getPrettyJson(resultBatchDatum));
+        log.info("Create vote batcbes - batchHash:" + HexUtil.encodeHexString(batchHash));
+
+//        log.info(JsonUtil.getPrettyJson(resultBatchDatum));
 
         // Build and post contract txn
         val utxoSelectionStrategy = new LargestFirstUtxoSelectionStrategy(utxoSupplier);
-        val collateralUtxos = utxoSelectionStrategy.select(sender, new Amount(LOVELACE, adaToLovelace(1)), emptySet());
+        val collateralUtxos = utxoSelectionStrategy.select(sender, new Amount(LOVELACE, adaToLovelace(10000)), emptySet());
 
         // Build the expected output
         val outputDatum = plutusObjectConverter.toPlutusData(resultBatchDatum);
@@ -193,6 +186,8 @@ public class VoteBatcher {
 
         val txBuilderContext = TxBuilderContext.init(utxoSupplier, protocolParamsSupplier);
         val transaction = txBuilderContext.buildAndSign(txBuilder, operatorAccountProvider.getTxSigner());
+
+        log.info("Fee:{}", transaction.getBody().getFee());
 
         val result = transactionProcessor.submitTransaction(transaction.serialize());
         if (!result.isSuccessful()) {

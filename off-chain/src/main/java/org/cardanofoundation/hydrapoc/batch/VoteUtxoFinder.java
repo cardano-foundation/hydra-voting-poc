@@ -10,7 +10,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import lombok.val;
 import org.cardanofoundation.hydrapoc.batch.data.output.ResultBatchDatum;
-import org.cardanofoundation.hydrapoc.commands.PlutusScriptUtil;
+import org.cardanofoundation.hydrapoc.util.PlutusScriptUtil;
 import org.cardanofoundation.hydrapoc.importvote.VoteDatum;
 import org.cardanofoundation.hydrapoc.util.MoreComparators;
 import org.springframework.stereotype.Component;
@@ -93,7 +93,7 @@ public class VoteUtxoFinder {
                         return new Tuple<>(utxo, resultBatchDatumOptional.orElse(null));
                     })
                     .filter(utxoOptionalTuple -> utxoOptionalTuple._2 != null)
-                    .sorted(MoreComparators.createTxHashAndTransactionIndexComparator())
+                    .sorted(createTxHashAndTransactionIndexComparator())
                     .toList();
 
             utxos.addAll(utxoTuples);

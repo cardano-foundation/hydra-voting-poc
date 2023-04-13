@@ -20,8 +20,9 @@ import com.bloxbean.cardano.client.transaction.spec.Value;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import lombok.val;
-import org.cardanofoundation.hydrapoc.commands.PlutusScriptUtil;
-import org.cardanofoundation.hydrapoc.commands.TransactionUtil;
+import org.cardanofoundation.hydrapoc.util.MoreComparators;
+import org.cardanofoundation.hydrapoc.util.PlutusScriptUtil;
+import org.cardanofoundation.hydrapoc.util.TransactionUtil;
 import org.cardanofoundation.hydrapoc.common.OperatorAccountProvider;
 import org.cardanofoundation.hydrapoc.model.Vote;
 import org.springframework.retry.annotation.Backoff;
@@ -31,8 +32,14 @@ import org.springframework.stereotype.Component;
 import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.util.Collection;
+import java.util.Comparator;
+import java.util.List;
+import java.util.SortedSet;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 import static com.bloxbean.cardano.client.common.ADAConversionUtil.adaToLovelace;
+import static org.cardanofoundation.hydrapoc.util.MoreComparators.createVoteComparator;
 
 @Component
 @RequiredArgsConstructor
@@ -52,7 +59,9 @@ public class VoteImporter {
             maxAttempts = 3,
             backoff = @Backoff(delay = 100))
     public String importVotes(Collection<Vote> votes) throws Exception {
-        return createTransactionWithDatum(votes);
+        List<Vote> sortedVotes = votes.stream().sorted(createVoteComparator()).toList();
+
+        return createTransactionWithDatum(sortedVotes);
     }
 
     private String createTransactionWithDatum(Collection<Vote> votes) throws Exception {
@@ -104,6 +113,7 @@ public class VoteImporter {
         txBuilderContext.setUtxoSelectionStrategy(new LargestFirstUtxoSelectionStrategy(utxoSupplier));
         Transaction transaction = txBuilderContext
                 .buildAndSign(txBuilder, operatorAccountProvider.getTxSigner());
+
 
         Result<String> result = transactionProcessor.submitTransaction(transaction.serialize());
         if (!result.isSuccessful()) {
