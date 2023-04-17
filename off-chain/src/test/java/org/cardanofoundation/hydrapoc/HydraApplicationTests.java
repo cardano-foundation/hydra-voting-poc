@@ -81,8 +81,6 @@ class HydraApplicationTests {
         val hc1 = new HydraWSClient(new URI("ws://dev.cf-hydra-voting-poc.metadata.dev.cf-deployments.org:4001"));
         hc1.setHydraStateEventListener(hydraOpenHandler);
         hc1.setHydraQueryEventListener(response -> {
-            val hydraState = hc1.getHydraState();
-
             if (response instanceof GreetingsResponse) {
                 hc1.init();
             }
@@ -91,7 +89,7 @@ class HydraApplicationTests {
                 utxo.setAddress("addr_test1vru2drx33ev6dt8gfq245r5k0tmy7ngqe79va69de9dxkrg09c7d3");
                 utxo.setValue(Map.of("lovelace", BigInteger.valueOf(500000000000L)));
 
-                hc1.commit("6352686c4593a4639c5c19178695cc48eb702e017537be6dd847244652aeb325#0", utxo);
+                hc1.commit("61bca44409c847ba67b417168f3af8a11fba1f909df9531d0d0501d7923087e7#0", utxo);
             }
         });
         val hc2 = new HydraWSClient(new URI("ws://dev.cf-hydra-voting-poc.metadata.dev.cf-deployments.org:4002"));
@@ -127,6 +125,14 @@ class HydraApplicationTests {
         System.out.println("reducing batches...");
         reduceBatch();
     }
+
+    // multi head operators (10)
+    // multi L2 batchers (10)
+
+    // burn NFT (when minted, when burned)
+    // CIP-30 data sign (L1) -> head operator
+
+    // same votes (proposals) for the same challenge
 
     //1. Generate 150 votes
     @Test
@@ -166,7 +172,7 @@ class HydraApplicationTests {
 
         Thread.sleep(5000);
 
-        var batchSize = 10;
+        var batchSize = 25;
 
         var allVotes = randomVoteGenerator.getAllVotes("votes.json");
         var partitions = Lists.partition(allVotes, batchSize);
@@ -190,7 +196,7 @@ class HydraApplicationTests {
     public void reduceBatch() throws Exception {
         log.info("Batch reduction...");
 
-        var batchSize = 5;
+        var batchSize = 10;
         Thread.sleep(5000);
 
         var allVotes = randomVoteGenerator.getAllVotes("votes.json");
@@ -221,7 +227,6 @@ class HydraApplicationTests {
         Thread.sleep(5000);
         voteBatchReducer.postReduceBatchTransaction(batchSize);
     }
-
 
     //The following are additional tests for command line options and other methods
     @Test

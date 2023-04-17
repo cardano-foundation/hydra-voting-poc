@@ -349,8 +349,8 @@
     },
     "decentralization": null,
     "executionUnitPrices": {
-        "priceMemory": 5.77e-2,
-        "priceSteps": 7.21e-5
+        "priceMemory": 0,
+        "priceSteps": 0
     },
     "extraPraosEntropy": null,
     "maxBlockBodySize": 65536,
@@ -381,6 +381,6 @@
     "treasuryCut": 0.1,
     "txFeeFixed": 0,
     "txFeePerByte": 0,
-    "utxoCostPerWord": 34488,
-    "utxoCostPerByte": 4310
+    "utxoCostPerWord": 0,
+    "utxoCostPerByte": 0
 }

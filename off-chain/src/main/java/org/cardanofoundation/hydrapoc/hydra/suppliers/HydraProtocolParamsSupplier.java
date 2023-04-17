@@ -32,11 +32,16 @@ public class HydraProtocolParamsSupplier implements ProtocolParamsSupplier {
 
     @Override
     public ProtocolParams getProtocolParams() {
+
         ProtocolParams protocolParams = new ProtocolParams();
         protocolParams.setCollateralPercent(new BigDecimal(protoParamsJson.get("collateralPercentage").asText()));
-        protocolParams.setCoinsPerUtxoSize(protoParamsJson.get("utxoCostPerByte").asText());
-        protocolParams.setMinFeeA(44);
-        protocolParams.setMinFeeB(155381);
+        String utxoCostPerByte = protoParamsJson.get("utxoCostPerByte").asText();
+        String utxoCostPerWord = protoParamsJson.get("utxoCostPerWord").asText();
+
+        protocolParams.setCoinsPerUtxoSize(utxoCostPerByte);
+        protocolParams.setCoinsPerUtxoWord(utxoCostPerWord);
+        protocolParams.setMinFeeA(1);
+        protocolParams.setMinFeeB(1);
         protocolParams.setPriceMem(new BigDecimal(protoParamsJson.get("executionUnitPrices").get("priceMemory").asText()));
         protocolParams.setPriceStep(new BigDecimal(protoParamsJson.get("executionUnitPrices").get("priceSteps").asText()));
         protocolParams.setMaxTxExMem(protoParamsJson.get("maxTxExecutionUnits").get("memory").asText());
