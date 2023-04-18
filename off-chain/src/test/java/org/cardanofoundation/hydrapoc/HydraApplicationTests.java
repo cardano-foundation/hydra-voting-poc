@@ -13,6 +13,7 @@ import com.bloxbean.cardano.client.util.Tuple;
 import com.google.common.collect.Lists;
 import lombok.extern.slf4j.Slf4j;
 import lombok.val;
+import org.cardanofoundation.hydra.client.HydraClientOptions;
 import org.cardanofoundation.hydra.client.HydraStateEventListener;
 import org.cardanofoundation.hydra.client.HydraWSClient;
 import org.cardanofoundation.hydra.client.model.HydraState;
@@ -34,8 +35,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 
 import java.math.BigInteger;
-import java.net.URI;
-import java.net.URISyntaxException;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -68,7 +67,7 @@ class HydraApplicationTests {
 
     // docker-compose exec cardano-node cardano-cli query utxo --testnet-magic 42 --address addr_test1vru2drx33ev6dt8gfq245r5k0tmy7ngqe79va69de9dxkrg09c7d3
     @Test
-    public void preInit() throws URISyntaxException, InterruptedException {
+    public void preInit() throws InterruptedException {
         CountDownLatch countDownLatch = new CountDownLatch(3);
 
         HydraStateEventListener hydraOpenHandler = (prevState, newState) -> {
@@ -78,9 +77,9 @@ class HydraApplicationTests {
             }
         };
 
-        val hc1 = new HydraWSClient(new URI("ws://dev.cf-hydra-voting-poc.metadata.dev.cf-deployments.org:4001"));
-        hc1.setHydraStateEventListener(hydraOpenHandler);
-        hc1.setHydraQueryEventListener(response -> {
+        val hc1 = new HydraWSClient(HydraClientOptions.createDefault("ws://dev.cf-hydra-voting-poc.metadata.dev.cf-deployments.org:4001"));
+        hc1.addHydraStateEventListener(hydraOpenHandler);
+        hc1.addHydraQueryEventListener(response -> {
             if (response instanceof GreetingsResponse) {
                 hc1.init();
             }
@@ -92,16 +91,16 @@ class HydraApplicationTests {
                 hc1.commit("61bca44409c847ba67b417168f3af8a11fba1f909df9531d0d0501d7923087e7#0", utxo);
             }
         });
-        val hc2 = new HydraWSClient(new URI("ws://dev.cf-hydra-voting-poc.metadata.dev.cf-deployments.org:4002"));
-        hc2.setHydraStateEventListener(hydraOpenHandler);
-        hc2.setHydraQueryEventListener(response -> {
+        val hc2 = new HydraWSClient(HydraClientOptions.createDefault("ws://dev.cf-hydra-voting-poc.metadata.dev.cf-deployments.org:4002"));
+        hc2.addHydraStateEventListener(hydraOpenHandler);
+        hc2.addHydraQueryEventListener(response -> {
             if (response instanceof HeadIsInitializingResponse) {
                 hc2.commit();
             }
         });
-        val hc3 = new HydraWSClient(new URI("ws://dev.cf-hydra-voting-poc.metadata.dev.cf-deployments.org:4003"));
-        hc3.setHydraStateEventListener(hydraOpenHandler);
-        hc3.setHydraQueryEventListener(response -> {
+        val hc3 = new HydraWSClient(HydraClientOptions.createDefault("ws://dev.cf-hydra-voting-poc.metadata.dev.cf-deployments.org:4003"));
+        hc3.addHydraStateEventListener(hydraOpenHandler);
+        hc3.addHydraQueryEventListener(response -> {
             if (response instanceof HeadIsInitializingResponse) {
                 hc3.commit();
             }
@@ -126,18 +125,10 @@ class HydraApplicationTests {
         reduceBatch();
     }
 
-    // multi head operators (10)
-    // multi L2 batchers (10)
-
-    // burn NFT (when minted, when burned)
-    // CIP-30 data sign (L1) -> head operator
-
-    // same votes (proposals) for the same challenge
-
     //1. Generate 150 votes
     @Test
     public void generateVotes() throws Exception {
-        command.generateVotes(10, 1100, "votes.json");
+        command.generateVotes(1000, 1100, "votes.json");
         var allVotes = randomVoteGenerator.getAllVotes("votes.json");
         System.out.println("Generated unique votes count:" + allVotes.size());
     }
@@ -145,7 +136,6 @@ class HydraApplicationTests {
     //2. Import 20 votes from votes.json to script address
     @Test
     public void importVotesFromFile() throws Exception {
-        //Thread.sleep(1000); //so that all previous messages are consumed from hydra
         var allVotes = randomVoteGenerator.getAllVotes("votes.json");
 
         var batchSize = 100;
@@ -156,7 +146,6 @@ class HydraApplicationTests {
 
         for (var votesPart : partitions) {
             if (votesPart.size() == batchSize) {
-                Thread.sleep(1000);
                 voteImporter.importVotes(votesPart);
             }
         }
@@ -170,62 +159,22 @@ class HydraApplicationTests {
     public void createAndPostBatch() throws Exception {
         log.info("Batch creation...");
 
-        Thread.sleep(5000);
-
         var batchSize = 25;
 
-        var allVotes = randomVoteGenerator.getAllVotes("votes.json");
-        var partitions = Lists.partition(allVotes, batchSize);
-
-        int i = 0;
-        for (var votesPart : partitions) {
-            if (votesPart.size() == batchSize) {
-                Thread.sleep(1000);
-                log.info("Posting batch, no:{}", i + 1);
-                voteBatcher.createAndPostBatchTransaction(batchSize);
-                i++;
-            }
-        }
+        while (voteBatcher.createAndPostBatchTransaction(batchSize).isPresent()) {}
 
         log.info("Batches creation completed.");
     }
 
-    // 4. Reduce batch of 4 to 1
-    // Run this test multiple times to reduce batches to 1 batch
     @Test
     public void reduceBatch() throws Exception {
         log.info("Batch reduction...");
 
         var batchSize = 10;
-        Thread.sleep(5000);
 
-        var allVotes = randomVoteGenerator.getAllVotes("votes.json");
-
-        var size = allVotes.size() / 10 / batchSize;
-
-        for (int i = 0; i < size; i++) {
-            Thread.sleep(1000);
-            log.info("Posting reduction batch, no:{}", i + 1);
-            voteBatchReducer.postReduceBatchTransaction(batchSize);
-        }
-
-        voteBatchReducer.postReduceBatchTransaction(batchSize);
-        voteBatchReducer.postReduceBatchTransaction(batchSize);
-        voteBatchReducer.postReduceBatchTransaction(batchSize);
-        voteBatchReducer.postReduceBatchTransaction(batchSize);
+        while (voteBatchReducer.postReduceBatchTransaction(batchSize).isPresent()) {}
 
         log.info("Reducing completed.");
-    }
-
-    @Test
-    public void reduceBatch2() throws Exception {
-        log.info("Batch reduction...");
-
-        var batchSize = 10;
-
-        voteBatchReducer.postReduceBatchTransaction(batchSize);
-        Thread.sleep(5000);
-        voteBatchReducer.postReduceBatchTransaction(batchSize);
     }
 
     //The following are additional tests for command line options and other methods

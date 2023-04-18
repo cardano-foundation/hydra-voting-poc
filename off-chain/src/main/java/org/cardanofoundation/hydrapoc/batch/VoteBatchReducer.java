@@ -75,6 +75,12 @@ public class VoteBatchReducer {
             return Optional.empty();
         }
 
+        if (utxoTuples.size() == 1) {
+            log.warn("Only final reduction left!");
+
+            return Optional.empty();
+        }
+
         val results = utxoTuples.stream().map(t -> t._2).toList();
         val mt = HashedList.create(results, r -> {
             return sha2_256(plutusObjectConverter.toPlutusData(r).serializeToBytes());
@@ -164,14 +170,14 @@ public class VoteBatchReducer {
         val txBuilderContext = TxBuilderContext.init(utxoSupplier, protocolParamsSupplier);
         val transaction = txBuilderContext.buildAndSign(txBuilder, operatorAccountProvider.getTxSigner());
 
-        log.info("Fee:{}", transaction.getBody().getFee());
+        log.info("Fee:{} lovelaces", transaction.getBody().getFee());
 
         val result = transactionProcessor.submitTransaction(transaction.serialize());
         if (!result.isSuccessful()) {
             throw new RuntimeException("Transaction failed. " + result.getResponse());
         }
 
-        log.info("Reduce Vote Batch Reducer Transaction Id : " + result.getValue());
+        log.info("Reduce Vote Batch Reducer Transaction Id:" + result.getValue());
 
         transactionUtil.waitForTransaction(result);
 
