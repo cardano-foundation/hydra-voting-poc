@@ -25,7 +25,7 @@ Using Hydra experiment with a distributed Catalyst tally process such that more 
     - 🟢 Spin up and run local dev Hydra Head network (devnet)
     - 🟢 Develop PoC version of Hydra-Java-Client which allows us to easily access Hydra from java code: https://github.com/cardano-foundation/hydra-java-client
     - 🟢 Port and run on chain contract counting unencrypted Catalyst votes with off-chain code on Hydra Dev network
-    - :hourglass_flowing_sand: Integrate merkle trees and vote batch creation and reduction contract on dev Hydra L2 network
+    - 🟢 Integrate merkle trees and vote batch creation and reduction contract on dev Hydra L2 network
 
 Demos:
  - M1 
