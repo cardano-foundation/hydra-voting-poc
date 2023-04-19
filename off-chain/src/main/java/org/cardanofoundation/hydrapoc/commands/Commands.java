@@ -44,7 +44,6 @@ public class Commands {
         List<String> txIds = new ArrayList<>();
 
         while (votes.size() > 0) {
-            Thread.sleep(importInterval);
             log.info("Import from index : " + index);
             String txHash = voteImporter.importVotes(votes);
             txIds.add(txHash);

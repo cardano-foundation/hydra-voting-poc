@@ -187,14 +187,14 @@ public class VoteBatcher {
         val txBuilderContext = TxBuilderContext.init(utxoSupplier, protocolParamsSupplier);
         val transaction = txBuilderContext.buildAndSign(txBuilder, operatorAccountProvider.getTxSigner());
 
-        log.info("Fee:{}", transaction.getBody().getFee());
+        log.info("Fee:{} lovelaces", transaction.getBody().getFee());
 
         val result = transactionProcessor.submitTransaction(transaction.serialize());
         if (!result.isSuccessful()) {
             throw new RuntimeException("Transaction failed. " + result.getResponse());
         }
 
-        log.info("Vote Batcher Transaction Id : " + result.getValue());
+        log.info("Vote Batcher Transaction Id: " + result.getValue());
 
         transactionUtil.waitForTransaction(result);
 

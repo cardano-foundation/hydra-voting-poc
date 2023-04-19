@@ -13,14 +13,12 @@ import com.fasterxml.jackson.databind.node.NullNode;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import lombok.val;
-import org.cardanofoundation.hydra.client.model.UTXO;
+import org.cardanofoundation.hydra.client.model.HydraState;
 import org.cardanofoundation.hydrapoc.hydra.HydraClient;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 
-import java.time.Duration;
-import java.util.Collections;
 import java.util.List;
 
 @Component
@@ -31,20 +29,20 @@ public class HydraUtxoSupplier implements UtxoSupplier {
 
     private final HydraClient hydraClient;
 
-    // SnapshotConfirmed
-
-    // hydra operator = auto signs it (auto-sign + manual sign)
-
     @Override
     public List<Utxo> getPage(String address, Integer nrOfItems, Integer page, OrderEnum order) {
+        if (hydraClient.getHydraState() != HydraState.Open) {
+            return List.of();
+        }
+        // no paging support in hydra
         if (page >= 1) {
-            return Collections.EMPTY_LIST;
+            return List.of();
         }
 
         try {
-            val getUTxOResponse = hydraClient.getUTXOs().block(Duration.ofSeconds(500));
+            val utxo = hydraClient.getUTxOStore().getLatestUTxO();
 
-            val utxos = getUTxOResponse.getUtxo().entrySet()
+            val utxos = utxo.entrySet()
                     .stream().filter(utxoEntry -> utxoEntry.getValue().getAddress().equals(address))
                     .map(utxoEntry -> new Tuple<>(StringUtils.split(utxoEntry.getKey(), "#"), utxoEntry.getValue()))
                     .map(tuple -> Utxo.builder()
@@ -60,8 +58,6 @@ public class HydraUtxoSupplier implements UtxoSupplier {
                             .referenceScriptHash(tuple._2.getReferenceScript())
                             .build())
                     .toList();
-
-            log.info("getUTxOResponse - last Seq:" + getUTxOResponse.getSeq());
 
             return utxos;
         } catch (Exception e) {
