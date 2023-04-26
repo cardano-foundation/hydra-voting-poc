@@ -27,16 +27,10 @@ public class VoteDatum {
     byte[] voterKey;
 
     @PlutusField
-    long votingPower;
-
-    @PlutusField
-    long challenge;
+    long category;
 
     @PlutusField
     long proposal;
-
-    @PlutusField
-    int choice;
 
     public static Optional<VoteDatum> deserialize(byte[] datum) {
         try {
@@ -49,21 +43,18 @@ public class VoteDatum {
 
             List<PlutusData> plutusDataList = constr.getData().getPlutusDataList();
             byte[] voterKey = ((BytesPlutusData) plutusDataList.get(0)).getValue();
-            long votingPower = ((BigIntPlutusData) plutusDataList.get(1)).getValue().longValue();
-            long challenge = ((BigIntPlutusData) plutusDataList.get(2)).getValue().longValue();
+            long category = ((BigIntPlutusData) plutusDataList.get(2)).getValue().longValue();
             long proposal = ((BigIntPlutusData) plutusDataList.get(3)).getValue().longValue();
-            int choice = ((BigIntPlutusData) plutusDataList.get(4)).getValue().intValue();
 
             return Optional.of(VoteDatum.builder()
                     .voterKey(voterKey)
-                    .votingPower(votingPower)
-                    .challenge(challenge)
+                    .category(category)
                     .proposal(proposal)
-                    .choice(choice)
                     .build());
         } catch (Exception e) {
             log.trace("Error in deserialization (VoteDatum)", e);
             return Optional.empty();
         }
     }
+
 }

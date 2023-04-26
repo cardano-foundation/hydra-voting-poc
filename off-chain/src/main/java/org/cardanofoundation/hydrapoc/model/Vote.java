@@ -14,8 +14,6 @@ import lombok.NoArgsConstructor;
 @Builder
 public class Vote {
     private byte[] voterKey;
-    private long votingPower;
-    private int challenge;
+    private int category;
     private int proposal;
-    private Choice choice;
 }

@@ -20,7 +20,6 @@ import com.bloxbean.cardano.client.util.HexUtil;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import lombok.val;
-import org.aspectj.util.FileUtil;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
@@ -32,25 +31,35 @@ import java.util.Set;
 
 import static com.bloxbean.cardano.client.transaction.spec.Language.PLUTUS_V2;
 import static com.bloxbean.cardano.client.transaction.util.CostModelUtil.getCostModelFromProtocolParams;
+import static org.aspectj.util.FileUtil.readAsString;
 
 @Component
 public class PlutusScriptUtil {
 
-    private String voteBatchContractCompileCode;
+    private String compiledContractHex;
 
     @Autowired
     private ObjectMapper objectMapper;
 
+    private final static String COMPILED_PATH = "../on-chain/plutus-compiled.json";
+
+    private final static String FALLBACK_PATH = "../on-chain/plutus.json";
+
     @PostConstruct
     public void init() throws IOException {
-        var plutusFileAsString = FileUtil.readAsString(new File("../on-chain/plutus.json"));
-        var validatorsNode =  ((ArrayNode)objectMapper.readTree(plutusFileAsString).get("validators"));
-        this.voteBatchContractCompileCode = validatorsNode.get(0).get("compiledCode").asText();
+        String plutusFileAsString = isFile(COMPILED_PATH) ? readAsString(new File(COMPILED_PATH)) : readAsString(new File(FALLBACK_PATH));
+
+        var validatorsNode =  ((ArrayNode) objectMapper.readTree(plutusFileAsString).get("validators"));
+        this.compiledContractHex = validatorsNode.get(0).get("compiledCode").asText();
     }
 
-    public PlutusV2Script getVoteBatcherContract() {
+    private boolean isFile(String path) {
+        return new File(path).isFile();
+    }
+
+    public PlutusV2Script getPlutusContract() {
         //Do double encoding for aiken compileCode
-        ByteString bs = new ByteString(HexUtil.decodeHexString(voteBatchContractCompileCode));
+        ByteString bs = new ByteString(HexUtil.decodeHexString(compiledContractHex));
         try {
             String cborHex = HexUtil.encodeHexString(CborSerializationUtil.serialize(bs));
             return PlutusV2Script.builder()
@@ -61,8 +70,8 @@ public class PlutusScriptUtil {
         }
     }
 
-    public String getVoteBatcherContractAddress() throws CborSerializationException {
-        return AddressProvider.getEntAddress(getVoteBatcherContract(), Networks.testnet()).toBech32();
+    public String getContractAddress() throws CborSerializationException {
+        return AddressProvider.getEntAddress(getPlutusContract(), Networks.testnet()).toBech32();
     }
 
     public static List<Redeemer> evaluateExUnitsDef(Transaction txn,

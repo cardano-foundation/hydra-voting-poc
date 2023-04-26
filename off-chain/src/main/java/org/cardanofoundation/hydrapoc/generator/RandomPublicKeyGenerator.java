@@ -10,7 +10,7 @@ import java.util.stream.IntStream;
 
 public class RandomPublicKeyGenerator {
 
-    public List<Voter> getRandomPublicKey(int n) throws Exception {
+    public List<Voter> getRandomPublicKey(int n) {
         List<Voter> publicKeys = new ArrayList<>();
         IntStream.range(0, n).forEach(
                 value -> {
@@ -25,4 +25,5 @@ public class RandomPublicKeyGenerator {
 
         return publicKeys;
     }
+
 }
