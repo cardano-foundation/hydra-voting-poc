@@ -2,9 +2,7 @@ package org.cardanofoundation.hydrapoc.commands;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.cardanofoundation.hydrapoc.batch.VoteBatchReducer;
-import org.cardanofoundation.hydrapoc.batch.VoteBatcher;
-import org.cardanofoundation.hydrapoc.batch.VoteUtxoFinder;
+import org.cardanofoundation.hydrapoc.batch.VoteValidator;
 import org.cardanofoundation.hydrapoc.generator.RandomVoteGenerator;
 import org.cardanofoundation.hydrapoc.importvote.VoteImporter;
 import org.cardanofoundation.hydrapoc.model.Vote;
@@ -23,9 +21,7 @@ public class Commands {
 
     private final RandomVoteGenerator randomVoteGenerator;
     private final VoteImporter voteImporter;
-    private final VoteBatcher voteBatcher;
-    private final VoteBatchReducer voteBatchReducer;
-    private final VoteUtxoFinder voteUtxoFinder;
+    private final VoteValidator voteValidator;
 
     @Value("${import.interval:1000}")
     private long importInterval;
@@ -58,31 +54,7 @@ public class Commands {
 
     @ShellMethod(value = "Create Batch")
     public void createBatch(@ShellOption int batchSize) throws Exception {
-        voteBatcher.createAndPostBatchTransaction(batchSize);
+        voteValidator.createVoteValidation(batchSize);
     }
 
-    @ShellMethod(value = "Reduce Batch")
-    public void reduceBatch(@ShellOption int batchSize) throws Exception {
-        voteBatchReducer.postReduceBatchTransaction(batchSize);
-    }
-
-    @ShellMethod(value = "Get vote utxos")
-    public void getVotes(@ShellOption int nVotes) {
-        voteUtxoFinder.getUtxosWithVotes(nVotes)
-                .forEach(utxoVoteDatumTuple -> {
-                    System.out.println("Utxo: " + utxoVoteDatumTuple._1.getTxHash() + "#" + utxoVoteDatumTuple._1.getOutputIndex());
-                    System.out.println("Vote: " + utxoVoteDatumTuple._2);
-                    System.out.println("\n--------------------------------------");
-                });
-    }
-
-    @ShellMethod(value = "Get vote batches")
-    public void getVoteBatches(@ShellOption int nBatch) {
-        voteUtxoFinder.getUtxosWithVoteBatches(nBatch)
-                .forEach(utxoVoteDatumTuple -> {
-                    System.out.println("Utxo: " + utxoVoteDatumTuple._1.getTxHash() + "#" + utxoVoteDatumTuple._1.getOutputIndex());
-                    System.out.println("Vote Batch: " + utxoVoteDatumTuple._2);
-                    System.out.println("\n--------------------------------------");
-                });
-    }
 }

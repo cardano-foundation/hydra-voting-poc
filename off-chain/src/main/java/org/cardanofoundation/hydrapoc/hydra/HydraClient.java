@@ -141,7 +141,6 @@ public class HydraClient implements HydraStateEventListener, HydraQueryEventList
     }
 
     public Mono<TxResult> submitTxFullConfirmation(byte[] cborTx) {
-
         return Mono.create(monoSink -> {
             String txHash = TransactionUtil.getTxHash(cborTx);
             log.info("Submitting tx:" + txHash);

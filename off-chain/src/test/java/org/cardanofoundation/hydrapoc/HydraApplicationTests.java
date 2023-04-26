@@ -3,13 +3,11 @@ package org.cardanofoundation.hydrapoc;
 import co.nstant.in.cbor.CborException;
 import co.nstant.in.cbor.model.ByteString;
 import com.bloxbean.cardano.client.address.AddressProvider;
-import com.bloxbean.cardano.client.api.model.Utxo;
 import com.bloxbean.cardano.client.common.cbor.CborSerializationUtil;
 import com.bloxbean.cardano.client.common.model.Networks;
 import com.bloxbean.cardano.client.exception.CborSerializationException;
 import com.bloxbean.cardano.client.transaction.spec.PlutusV2Script;
 import com.bloxbean.cardano.client.util.HexUtil;
-import com.bloxbean.cardano.client.util.Tuple;
 import com.google.common.collect.Lists;
 import lombok.extern.slf4j.Slf4j;
 import lombok.val;
@@ -20,14 +18,11 @@ import org.cardanofoundation.hydra.client.model.HydraState;
 import org.cardanofoundation.hydra.client.model.UTXO;
 import org.cardanofoundation.hydra.client.model.query.response.GreetingsResponse;
 import org.cardanofoundation.hydra.client.model.query.response.HeadIsInitializingResponse;
-import org.cardanofoundation.hydrapoc.batch.VoteBatchReducer;
-import org.cardanofoundation.hydrapoc.batch.VoteBatcher;
 import org.cardanofoundation.hydrapoc.batch.VoteUtxoFinder;
-import org.cardanofoundation.hydrapoc.batch.data.output.ResultBatchDatum;
+import org.cardanofoundation.hydrapoc.batch.VoteValidator;
 import org.cardanofoundation.hydrapoc.commands.Commands;
 import org.cardanofoundation.hydrapoc.generator.RandomVoteGenerator;
 import org.cardanofoundation.hydrapoc.hydra.util.FuelTransaction;
-import org.cardanofoundation.hydrapoc.importvote.VoteDatum;
 import org.cardanofoundation.hydrapoc.importvote.VoteImporter;
 import org.cardanofoundation.hydrapoc.model.Vote;
 import org.junit.jupiter.api.Test;
@@ -60,10 +55,7 @@ class HydraApplicationTests {
     private VoteUtxoFinder voteUtxoFinder;
 
     @Autowired
-    private VoteBatcher voteBatcher;
-
-    @Autowired
-    private VoteBatchReducer voteBatchReducer;
+    private VoteValidator voteValidator;
 
     // docker-compose exec cardano-node cardano-cli query utxo --testnet-magic 42 --address addr_test1vru2drx33ev6dt8gfq245r5k0tmy7ngqe79va69de9dxkrg09c7d3
     @Test
@@ -121,8 +113,6 @@ class HydraApplicationTests {
         importVotesFromFile();
         System.out.println("creating and posting batches...");
         createAndPostBatch();
-        System.out.println("reducing batches...");
-        reduceBatch();
     }
 
     //1. Generate 150 votes
@@ -161,20 +151,9 @@ class HydraApplicationTests {
 
         var batchSize = 25;
 
-        while (voteBatcher.createAndPostBatchTransaction(batchSize).isPresent()) {}
+        while (voteValidator.createVoteValidation(batchSize).isPresent()) {}
 
         log.info("Batches creation completed.");
-    }
-
-    @Test
-    public void reduceBatch() throws Exception {
-        log.info("Batch reduction...");
-
-        var batchSize = 10;
-
-        while (voteBatchReducer.postReduceBatchTransaction(batchSize).isPresent()) {}
-
-        log.info("Reducing completed.");
     }
 
     //The following are additional tests for command line options and other methods
@@ -193,20 +172,6 @@ class HydraApplicationTests {
     public void importVotesCmd() throws Exception {
         List<String> txIds = command.importVotes(0, 5, "votes-1.json");
         System.out.println(txIds);
-    }
-
-    @Test
-    public void getUtxosWithVotes() {
-        List<Tuple<Utxo, VoteDatum>> utxoTuples = voteUtxoFinder.getUtxosWithVotes(20);
-        System.out.println(utxoTuples);
-    }
-
-
-    @Test
-    public void readVoteResultDatum() {
-        String resultDatum = "d8799fa2d8799f1a0184abe81a00047187ffd8799f001a009190fb00ffd8799f1a0fbb60ad1a0004320fffd8799f1a00754f980000ffff";
-        ResultBatchDatum resultBatchDatum = ResultBatchDatum.deserialize(HexUtil.decodeHexString(resultDatum)).get();
-        System.out.println(resultBatchDatum);
     }
 
     @Test

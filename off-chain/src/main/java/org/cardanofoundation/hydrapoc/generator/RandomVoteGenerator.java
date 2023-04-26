@@ -4,7 +4,6 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.extern.slf4j.Slf4j;
 import org.cardanofoundation.hydrapoc.model.ChallengeProposal;
-import org.cardanofoundation.hydrapoc.model.Choice;
 import org.cardanofoundation.hydrapoc.model.Vote;
 import org.cardanofoundation.hydrapoc.model.Voter;
 import org.springframework.beans.factory.annotation.Value;
@@ -37,7 +36,7 @@ public class RandomVoteGenerator {
     public void generate(int noOfVoters, int noOfVotes, String fileName) throws Exception {
         Set<Vote> votes = getRandomVotes(noOfVoters, noOfVotes);
 
-        FileOutputStream fout = new FileOutputStream(new File(fileName));
+        FileOutputStream fout = new FileOutputStream(fileName);
         objectMapper.writerWithDefaultPrettyPrinter().writeValue(fout, votes);
 
         log.info("Random vote generation - Done");
@@ -58,7 +57,7 @@ public class RandomVoteGenerator {
         //100 random proposals for every challenge
         List<ChallengeProposal> challengeProposals = new ArrayList<>();
         for (Integer challengeId: challengeIds) {
-            for (int i=0; i<nRandomProposal; i++) {
+            for (int i = 0; i<nRandomProposal; i++) {
                 ChallengeProposal challengeProposal = new ChallengeProposal(challengeId, RandomUtil.getRandomNumber(100000, 6000000));
                 challengeProposals.add(challengeProposal);
             }
@@ -74,24 +73,13 @@ public class RandomVoteGenerator {
             Voter voter = voters.get(randomVoterIndex);
             ChallengeProposal challengeProposal = challengeProposals.get(randomChallengeIndex);
 
-            Vote vote = new Vote(voter.pubKey(), voter.votingPower(), challengeProposal.challenge(),
-                    challengeProposal.proposal(), getRandomChoice());
+            Vote vote = new Vote(voter.pubKey(), challengeProposal.challenge(), challengeProposal.proposal());
             votes.add(vote);
         }
-        log.info("Random vote generation - Done");
-        return votes;
-    }
 
-    private Choice getRandomChoice() {
-        int randomChoice = RandomUtil.getRandomNumber(0, 3);
-        if (randomChoice == 0)
-            return Choice.ABSTAIN;
-        else if (randomChoice == 1)
-            return Choice.NAY;
-        else if (randomChoice == 2)
-            return Choice.YAY;
-        else
-            throw new RuntimeException("Invalid choice : " + randomChoice);
+        log.info("Random vote generation - Done");
+
+        return votes;
     }
 
     /**
@@ -109,14 +97,14 @@ public class RandomVoteGenerator {
         List<Vote> votes = getAllVotes(voteFile);
 
         if (startIndex >= votes.size()) {
-            return Collections.EMPTY_LIST;
-        } else {
-            if (startIndex + batchSize >= votes.size())
-                return votes.subList(startIndex, votes.size());
-            else
-                return votes.subList(startIndex, startIndex + batchSize);
-
+            return Collections.emptyList();
         }
+
+        if (startIndex + batchSize >= votes.size()) {
+            return votes.subList(startIndex, votes.size());
+        }
+
+        return votes.subList(startIndex, startIndex + batchSize);
     }
 
     public List<Vote> getAllVotes(String voteFile) throws IOException {
@@ -127,4 +115,5 @@ public class RandomVoteGenerator {
     public static void main(String[] args) throws Exception {
         new RandomVoteGenerator().generate(89000, 300000, "votes.json");
     }
+
 }

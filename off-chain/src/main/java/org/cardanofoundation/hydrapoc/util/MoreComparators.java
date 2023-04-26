@@ -15,7 +15,7 @@ public class MoreComparators {
     }
 
     public static <T> Comparator<Vote> createVoteComparator() {
-        return Comparator.comparingInt(Vote::getChallenge).thenComparingInt(Vote::getProposal);
+        return Comparator.comparingInt(Vote::getCategory).thenComparingInt(Vote::getProposal);
     }
 
 }

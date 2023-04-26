@@ -3,23 +3,18 @@ package org.cardanofoundation.hydrapoc;
 import co.nstant.in.cbor.CborException;
 import co.nstant.in.cbor.model.ByteString;
 import com.bloxbean.cardano.client.address.AddressProvider;
-import com.bloxbean.cardano.client.api.model.Utxo;
 import com.bloxbean.cardano.client.common.cbor.CborSerializationUtil;
 import com.bloxbean.cardano.client.common.model.Networks;
 import com.bloxbean.cardano.client.exception.CborSerializationException;
 import com.bloxbean.cardano.client.transaction.spec.PlutusV2Script;
 import com.bloxbean.cardano.client.util.HexUtil;
-import com.bloxbean.cardano.client.util.Tuple;
 import com.google.common.collect.Lists;
 import lombok.extern.slf4j.Slf4j;
-import org.cardanofoundation.hydrapoc.batch.VoteBatchReducer;
-import org.cardanofoundation.hydrapoc.batch.VoteBatcher;
 import org.cardanofoundation.hydrapoc.batch.VoteUtxoFinder;
-import org.cardanofoundation.hydrapoc.batch.data.output.ResultBatchDatum;
+import org.cardanofoundation.hydrapoc.batch.VoteValidator;
 import org.cardanofoundation.hydrapoc.commands.Commands;
 import org.cardanofoundation.hydrapoc.generator.RandomVoteGenerator;
 import org.cardanofoundation.hydrapoc.hydra.util.FuelTransaction;
-import org.cardanofoundation.hydrapoc.importvote.VoteDatum;
 import org.cardanofoundation.hydrapoc.importvote.VoteImporter;
 import org.cardanofoundation.hydrapoc.model.Vote;
 import org.junit.jupiter.api.Test;
@@ -48,19 +43,14 @@ class L1ApplicationTests {
     private VoteUtxoFinder voteUtxoFinder;
 
     @Autowired
-    private VoteBatcher voteBatcher;
-
-    @Autowired
-    private VoteBatchReducer voteBatchReducer;
+    private VoteValidator voteValidator;
 
     @Test
     public void fullMonthy01() throws Exception {
         System.out.println("importing votes...");
         importVotesFromFile();
         System.out.println("creating and posting batches...");
-        createAndPostBatch();
-        System.out.println("reducing batches...");
-        reduceBatch();
+        validateVotes();
     }
 
     //1. Generate 150 votes
@@ -74,7 +64,6 @@ class L1ApplicationTests {
     //2. Import 20 votes from votes.json to script address
     @Test
     public void importVotesFromFile() throws Exception {
-        //Thread.sleep(1000); //so that all previous messages are consumed from hydra
         var allVotes = randomVoteGenerator.getAllVotes("votes.json");
 
         var batchSize = 2;
@@ -84,7 +73,6 @@ class L1ApplicationTests {
 
         for (var votesPart : partitions) {
             if (votesPart.size() == batchSize) {
-                //Thread.sleep(1000);
                 voteImporter.importVotes(votesPart);
             }
         }
@@ -95,37 +83,15 @@ class L1ApplicationTests {
     //3. Create a batch of 2 votes --> 1 result
     //Run this test multiple times to create multiple batches
     @Test
-    public void createAndPostBatch() throws Exception {
-        //Thread.sleep(5000);
+    public void validateVotes() throws Exception {
         var allVotes = randomVoteGenerator.getAllVotes("votes.json");
-        var batchSize = 2;
-        var partitions = Lists.partition(allVotes, batchSize);
 
         log.info("Counting votes, count:" + allVotes.size());
-
-        for (var votesPart : partitions) {
-            //Thread.sleep(1000);
-            voteBatcher.createAndPostBatchTransaction(batchSize);
+        for (Vote v : allVotes) {
+            voteValidator.createVoteValidation(1);
         }
 
         log.info("Counting votes completed.");
-    }
-
-    // 4. Reduce batch of 4 to 1
-    // Run this test multiple times to reduce batches to 1 batch
-    @Test
-    public void reduceBatch() throws Exception {
-        //Thread.sleep(5000);
-
-        var allVotes = randomVoteGenerator.getAllVotes("votes.json");
-        var itOne = allVotes.size() / 2;
-        var itTwo = allVotes.size() / 2;
-
-        for (int i = 0; i < itTwo; i++) {
-            voteBatchReducer.postReduceBatchTransaction(2);
-        }
-
-        voteBatchReducer.postReduceBatchTransaction(2);
     }
 
     //The following are additional tests for command line options and other methods
@@ -133,31 +99,6 @@ class L1ApplicationTests {
     public void importVotes() throws Exception {
         Set<Vote> votes = randomVoteGenerator.getRandomVotes(20, 100);
         voteImporter.importVotes(votes);
-    }
-
-    @Test
-    public void generateVotesCmd() throws Exception {
-        command.generateVotes(10, 30, "votes-1.json");
-    }
-
-    @Test
-    public void importVotesCmd() throws Exception {
-        List<String> txIds = command.importVotes(0, 5, "votes-1.json");
-        System.out.println(txIds);
-    }
-
-    @Test
-    public void getUtxosWithVotes() {
-        List<Tuple<Utxo, VoteDatum>> utxoTuples = voteUtxoFinder.getUtxosWithVotes(20);
-        System.out.println(utxoTuples);
-    }
-
-
-    @Test
-    public void readVoteResultDatum() {
-        String resultDatum = "d8799fa2d8799f1a0184abe81a00047187ffd8799f001a009190fb00ffd8799f1a0fbb60ad1a0004320fffd8799f1a00754f980000ffff";
-        ResultBatchDatum resultBatchDatum = ResultBatchDatum.deserialize(HexUtil.decodeHexString(resultDatum)).get();
-        System.out.println(resultBatchDatum);
     }
 
     @Test
