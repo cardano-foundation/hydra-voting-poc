@@ -24,7 +24,6 @@ import org.cardanofoundation.hydrapoc.commands.Commands;
 import org.cardanofoundation.hydrapoc.generator.RandomVoteGenerator;
 import org.cardanofoundation.hydrapoc.hydra.util.FuelTransaction;
 import org.cardanofoundation.hydrapoc.importvote.VoteImporter;
-import org.cardanofoundation.hydrapoc.model.Vote;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -32,7 +31,6 @@ import org.springframework.boot.test.context.SpringBootTest;
 import java.math.BigInteger;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import java.util.concurrent.CountDownLatch;
 
 import static java.util.concurrent.TimeUnit.SECONDS;
@@ -112,7 +110,7 @@ class HydraApplicationTests {
         System.out.println("importing votes...");
         importVotesFromFile();
         System.out.println("creating and posting batches...");
-        createAndPostBatch();
+        validateVotes();
     }
 
     //1. Generate 150 votes
@@ -120,6 +118,7 @@ class HydraApplicationTests {
     public void generateVotes() throws Exception {
         command.generateVotes(1000, 1100, "votes.json");
         var allVotes = randomVoteGenerator.getAllVotes("votes.json");
+
         System.out.println("Generated unique votes count:" + allVotes.size());
     }
 
@@ -146,32 +145,14 @@ class HydraApplicationTests {
     //3. Create a batch of 25 votes --> 1 result
     //Run this test multiple times to create multiple batches
     @Test
-    public void createAndPostBatch() throws Exception {
-        log.info("Batch creation...");
+    public void validateVotes() throws Exception {
+        log.info("Votes validation...");
 
         var batchSize = 25;
 
         while (voteValidator.createVoteValidation(batchSize).isPresent()) {}
 
-        log.info("Batches creation completed.");
-    }
-
-    //The following are additional tests for command line options and other methods
-    @Test
-    public void importVotes() throws Exception {
-        Set<Vote> votes = randomVoteGenerator.getRandomVotes(20, 100);
-        voteImporter.importVotes(votes);
-    }
-
-    @Test
-    public void generateVotesCmd() throws Exception {
-        command.generateVotes(10, 30, "votes-1.json");
-    }
-
-    @Test
-    public void importVotesCmd() throws Exception {
-        List<String> txIds = command.importVotes(0, 5, "votes-1.json");
-        System.out.println(txIds);
+        log.info("Validate votes completed.");
     }
 
     @Test

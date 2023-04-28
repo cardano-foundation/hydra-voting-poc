@@ -26,6 +26,7 @@ import static org.springframework.util.StringUtils.hasLength;
 public class VoteUtxoFinder {
 
     private final UtxoSupplier utxoSupplier;
+
     private final PlutusScriptUtil plutusScriptUtil;
 
     public Optional<Tuple<Utxo, VoteDatum>> findFirstVote(final long category) {
@@ -76,6 +77,7 @@ public class VoteUtxoFinder {
     }
 
     // we may consider some random implementation, e.g. finding first random category results
+
     public Optional<Tuple<Utxo, CategoryResultsDatum>> findFirstCategoryResults(final long category) {
         boolean isContinue = true;
 

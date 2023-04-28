@@ -1,25 +1,59 @@
 use acca/datums as adatums
 use acca/dict as adict
+use acca/hash.{PubKeyHash} as ahash
 use acca/list as alist
 use acca/validators
 use aiken/dict
 use aiken/int
 use aiken/list
 use aiken/transaction.{InlineDatum, Input, Output, ScriptContext, Spend}
-use voting/datums.{Category, CategoryResults, Vote}
+use voting/datums.{Category, CategoryResults, Namespace, Proposal, Vote}
+
+// accumulator (inline datum)
+// vote (inline datum) -> inputs
+
+// + NFT
+
+// input (utxo) + datum
+
+// 1 vote + 1 accumulator
+
+type VotingDatum {
+  Vote
+  Accumulator { categoryResults: CategoryResults }
+}
 
 type Redeemer {
   ValidateVote
   Close
 }
 
-validator(category: Category) {
+// accumulator 
+// nft - burn it
+// 1 vote (inline datum)
+
+// how to detect the first CategoryResults
+
+// Namespace: e.g. Cardano_Summit_2023
+// category: 123
+// cf_pub_key: CF pub key used to validate public signatures
+// pub keys of all hydra network validators?
+validator(namespace: Namespace, category: Category, cf_public_key: ByteArray) {
   fn voting(
-    _datum: Void,
+    datum: VotingDatum,
     // first input
     redeemer: Redeemer,
     sc: ScriptContext,
   ) -> Bool {
+    // when datum is {
+    //   Accumulator { categoryResults: CategoryResults } ->
+    //     // extract the 1 vote from the inputs
+    //     // validate the vote
+    //     True
+    //   _ ->
+    //     True
+    // }
+
     expect Spend(output_reference) =
       sc.purpose
 
@@ -38,11 +72,12 @@ validator(category: Category) {
           get_first_category_result_from_inputs(inputs)
 
         let new_category_results: CategoryResults =
-          add_vote(vote, category, category_results)
+          add_vote(vote, category_results)
 
         list.and(
           [
             // online validate votes from our category
+            (vote.namespace == namespace)?,
             (vote.category == category)?,
             // make sure we are spending to the same validator
             validators.any_output_contains_own_validator_address(
@@ -93,11 +128,7 @@ fn output_contains_accumulated_results(
     |> list.any(result_checker)
 }
 
-fn add_vote(
-  vote: Vote,
-  category: Category,
-  category_results: CategoryResults,
-) -> CategoryResults {
+fn add_vote(vote: Vote, category_results: CategoryResults) -> CategoryResults {
   let p =
     vote.proposal
   let results =
@@ -109,7 +140,7 @@ fn add_vote(
   let new_results =
     dict.insert(self: results, key: p, value: count, compare: int.compare)
 
-  CategoryResults { category, results: new_results }
+  CategoryResults { ..category_results, results: new_results }
 }
 
 // TODO what is there are more votes?
@@ -120,6 +151,9 @@ fn get_first_vote_from_inputs(inputs: List<Input>) -> Vote {
       if adatums.is_inline_datum(input.output) {
         expect InlineDatum(data) =
           input.output.datum
+
+        let a: Data =
+          data
 
         // TODO instance_of operator
         expect v: Vote =
