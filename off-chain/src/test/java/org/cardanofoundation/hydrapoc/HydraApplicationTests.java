@@ -14,12 +14,14 @@ import com.google.common.collect.Lists;
 import lombok.extern.slf4j.Slf4j;
 import lombok.val;
 import org.cardanofoundation.hydra.client.HydraClientOptions;
+import org.cardanofoundation.hydra.client.HydraQueryEventListener;
 import org.cardanofoundation.hydra.client.HydraStateEventListener;
 import org.cardanofoundation.hydra.client.HydraWSClient;
-import org.cardanofoundation.hydra.client.model.HydraState;
-import org.cardanofoundation.hydra.client.model.UTXO;
-import org.cardanofoundation.hydra.client.model.query.response.GreetingsResponse;
-import org.cardanofoundation.hydra.client.model.query.response.HeadIsInitializingResponse;
+import org.cardanofoundation.hydra.core.model.HydraState;
+import org.cardanofoundation.hydra.core.model.UTXO;
+import org.cardanofoundation.hydra.core.model.query.response.GreetingsResponse;
+import org.cardanofoundation.hydra.core.model.query.response.HeadIsInitializingResponse;
+import org.cardanofoundation.hydra.core.model.query.response.Response;
 import org.cardanofoundation.hydrapoc.batch.VoteBatchReducer;
 import org.cardanofoundation.hydrapoc.batch.VoteBatcher;
 import org.cardanofoundation.hydrapoc.batch.VoteUtxoFinder;
@@ -79,30 +81,39 @@ class HydraApplicationTests {
 
         val hc1 = new HydraWSClient(HydraClientOptions.createDefault("ws://dev.cf-hydra-voting-poc.metadata.dev.cf-deployments.org:4001"));
         hc1.addHydraStateEventListener(hydraOpenHandler);
-        hc1.addHydraQueryEventListener(response -> {
-            if (response instanceof GreetingsResponse) {
-                hc1.init();
-            }
-            if (response instanceof HeadIsInitializingResponse) {
-                val utxo = new UTXO();
-                utxo.setAddress("addr_test1vru2drx33ev6dt8gfq245r5k0tmy7ngqe79va69de9dxkrg09c7d3");
-                utxo.setValue(Map.of("lovelace", BigInteger.valueOf(500000000000L)));
+        hc1.addHydraQueryEventListener(new HydraQueryEventListener.Stub() {
+            @Override
+            public void onResponse(Response response) {
+                if (response instanceof GreetingsResponse) {
+                    hc1.init();
+                }
+                if (response instanceof HeadIsInitializingResponse) {
+                    val utxo = new UTXO();
+                    utxo.setAddress("addr_test1vru2drx33ev6dt8gfq245r5k0tmy7ngqe79va69de9dxkrg09c7d3");
+                    utxo.setValue(Map.of("lovelace", BigInteger.valueOf(500000000000L)));
 
-                hc1.commit("61bca44409c847ba67b417168f3af8a11fba1f909df9531d0d0501d7923087e7#0", utxo);
+                    hc1.commit("61bca44409c847ba67b417168f3af8a11fba1f909df9531d0d0501d7923087e7#0", utxo);
+                }
             }
         });
         val hc2 = new HydraWSClient(HydraClientOptions.createDefault("ws://dev.cf-hydra-voting-poc.metadata.dev.cf-deployments.org:4002"));
         hc2.addHydraStateEventListener(hydraOpenHandler);
-        hc2.addHydraQueryEventListener(response -> {
-            if (response instanceof HeadIsInitializingResponse) {
-                hc2.commit();
+        hc2.addHydraQueryEventListener(new HydraQueryEventListener.Stub() {
+            @Override
+            public void onResponse(Response response) {
+                if (response instanceof HeadIsInitializingResponse) {
+                    hc2.commit();
+                }
             }
         });
         val hc3 = new HydraWSClient(HydraClientOptions.createDefault("ws://dev.cf-hydra-voting-poc.metadata.dev.cf-deployments.org:4003"));
         hc3.addHydraStateEventListener(hydraOpenHandler);
-        hc3.addHydraQueryEventListener(response -> {
-            if (response instanceof HeadIsInitializingResponse) {
-                hc3.commit();
+        hc3.addHydraQueryEventListener(new HydraQueryEventListener.Stub() {
+            @Override
+            public void onResponse(Response response) {
+                if (response instanceof HeadIsInitializingResponse) {
+                    hc3.commit();
+                }
             }
         });
 

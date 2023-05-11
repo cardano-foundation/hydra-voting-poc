@@ -13,7 +13,7 @@ import com.fasterxml.jackson.databind.node.NullNode;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import lombok.val;
-import org.cardanofoundation.hydra.client.model.HydraState;
+import org.cardanofoundation.hydra.core.model.HydraState;
 import org.cardanofoundation.hydrapoc.hydra.HydraClient;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Component;

@@ -33,7 +33,7 @@ dependencies {
     implementation("org.cardanofoundation:merkle-tree-java:0.0.1-SNAPSHOT")
     implementation('io.projectreactor:reactor-core:3.5.4')
 
-    implementation("org.cardanofoundation:hydra-java-client:0.0.3-SNAPSHOT")
+    implementation("org.cardanofoundation:hydra-java-client:0.0.5-SNAPSHOT")
 
     implementation 'org.projectlombok:lombok:1.18.26'
     annotationProcessor 'org.projectlombok:lombok:1.18.26'

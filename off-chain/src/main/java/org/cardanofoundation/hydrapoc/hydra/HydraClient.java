@@ -7,11 +7,11 @@ import org.cardanofoundation.hydra.client.HydraClientOptions;
 import org.cardanofoundation.hydra.client.HydraQueryEventListener;
 import org.cardanofoundation.hydra.client.HydraStateEventListener;
 import org.cardanofoundation.hydra.client.HydraWSClient;
-import org.cardanofoundation.hydra.client.model.HydraState;
-import org.cardanofoundation.hydra.client.model.Request;
-import org.cardanofoundation.hydra.client.model.Transaction;
-import org.cardanofoundation.hydra.client.model.UTXO;
-import org.cardanofoundation.hydra.client.model.query.response.*;
+import org.cardanofoundation.hydra.core.model.HydraState;
+import org.cardanofoundation.hydra.core.model.Request;
+import org.cardanofoundation.hydra.core.model.Transaction;
+import org.cardanofoundation.hydra.core.model.UTXO;
+import org.cardanofoundation.hydra.core.model.query.response.*;
 import org.cardanofoundation.hydrapoc.store.InMemoryUTxOStore;
 import org.cardanofoundation.hydrapoc.store.UTxOStore;
 import org.springframework.beans.factory.annotation.Value;
@@ -28,7 +28,7 @@ import java.util.concurrent.ConcurrentHashMap;
 @Component
 @Slf4j
 @ConditionalOnProperty(prefix = "hydra", name = "ws.url")
-public class HydraClient implements HydraStateEventListener, HydraQueryEventListener {
+public class HydraClient extends HydraQueryEventListener.Stub implements HydraStateEventListener {
 
     private HydraWSClient hydraWSClient;
 
@@ -43,12 +43,22 @@ public class HydraClient implements HydraStateEventListener, HydraQueryEventList
     }
 
     public Mono<Void> connect() {
-        return connectInternally(-1);
+        if (hydraWSClient != null && hydraWSClient.isOpen()) {
+            return Mono.empty();
+        }
+
+        var options = HydraClientOptions.builder(hydraWsUrl)
+                .build();
+        this.hydraWSClient = new HydraWSClient(options);
+        hydraWSClient.addHydraQueryEventListener(this);
+        hydraWSClient.addHydraStateEventListener(this);
+
+        return Mono.create(monoSink -> {
+            storeMonoSinkReference(new HydraConnectRequest().key(), monoSink);
+            hydraWSClient.connect();
+        });
     }
 
-    public Mono<Void> connect(int fromSeq) {
-        return connectInternally(fromSeq);
-    }
     public void disconnect() {
         if (hydraWSClient != null) {
             hydraWSClient.close();
@@ -57,29 +67,6 @@ public class HydraClient implements HydraStateEventListener, HydraQueryEventList
 
     public UTxOStore getUTxOStore() {
         return uTxOStore;
-    }
-
-    private Mono<Void> connectInternally(final int fromSeq) {
-        if (hydraWSClient != null && hydraWSClient.isOpen()) {
-            return Mono.empty();
-        }
-
-        if (fromSeq > 0) {
-            var options = HydraClientOptions.builder(hydraWsUrl)
-                    .fromSeq(fromSeq)
-                    .build();
-
-            this.hydraWSClient = new HydraWSClient(options);
-        } else {
-            this.hydraWSClient = new HydraWSClient(HydraClientOptions.createDefault(hydraWsUrl));
-        }
-        hydraWSClient.addHydraQueryEventListener(this);
-        hydraWSClient.addHydraStateEventListener(this);
-
-        return Mono.create(monoSink -> {
-            storeMonoSinkReference(new HydraConnectRequest().key(), monoSink);
-            hydraWSClient.connect();
-        });
     }
 
     @Override
@@ -136,7 +123,7 @@ public class HydraClient implements HydraStateEventListener, HydraQueryEventList
         return Mono.create(monoSink -> {
             String txHash = TransactionUtil.getTxHash(cborTx);
             storeMonoSinkReference(TxLocalRequest.of(txHash).key(), monoSink);
-            hydraWSClient.newTx(HexUtil.encodeHexString(cborTx));
+            hydraWSClient.submitTx(HexUtil.encodeHexString(cborTx));
         });
     }
 
@@ -147,11 +134,11 @@ public class HydraClient implements HydraStateEventListener, HydraQueryEventList
             log.info("Submitting tx:" + txHash);
 
             storeMonoSinkReference(TxGlobalRequest.of(txHash).key(), monoSink);
-            hydraWSClient.newTx(HexUtil.encodeHexString(cborTx));
+            hydraWSClient.submitTx(HexUtil.encodeHexString(cborTx));
         });
     }
 
-    protected <T extends Request> void storeMonoSinkReference(String key, MonoSink monoSink) {
+    protected void storeMonoSinkReference(String key, MonoSink monoSink) {
         monoSinkMap.computeIfAbsent(key, k -> {
             var list = new ArrayList<MonoSink>();
             list.add(monoSink);

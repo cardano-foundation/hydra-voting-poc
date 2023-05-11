@@ -1,6 +1,6 @@
 package org.cardanofoundation.hydrapoc.store;
 
-import org.cardanofoundation.hydra.client.model.UTXO;
+import org.cardanofoundation.hydra.core.model.UTXO;
 
 import java.util.HashMap;
 import java.util.Map;
