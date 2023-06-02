@@ -3,6 +3,7 @@
 Check [Project Charter](./docs/project-charter.md) for details about this project
 
 ![image](https://user-images.githubusercontent.com/335933/219307601-7c5fc745-c19e-489b-a63e-586fd8ee8e8d.png)
+![Discord](https://img.shields.io/discord/1022471509173882950)
 
 ### Problem statement
 Currently IOG is the only party doing tallying of the votes (meaning checking result of the votes). We would like to see how Hydra could be used to decentralise this process and allow more members (ideally from Cardano community) to tally / count Catalyst votes independently while reaching the same final verdict.
