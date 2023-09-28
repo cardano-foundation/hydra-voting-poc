@@ -16,6 +16,7 @@ import com.bloxbean.cardano.client.plutus.api.PlutusObjectConverter;
 import com.bloxbean.cardano.client.plutus.impl.DefaultPlutusObjectConverter;
 import com.bloxbean.cardano.client.transaction.spec.ExUnits;
 import com.bloxbean.cardano.client.transaction.spec.RedeemerTag;
+import com.bloxbean.cardano.client.util.HexUtil;
 import com.bloxbean.cardano.client.util.JsonUtil;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -70,7 +71,7 @@ public class VoteBatchReducer {
 
         val utxoTuples = voteUtxoFinder.getUtxosWithVoteBatches(batchSize);
 
-        if (utxoTuples.size() == 0) {
+        if (utxoTuples.isEmpty()) {
             log.warn("No utxo found");
             return Optional.empty();
         }
@@ -83,7 +84,7 @@ public class VoteBatchReducer {
 
         val results = utxoTuples.stream().map(t -> t._2).toList();
         val mt = HashedList.create(results, r -> {
-            return sha2_256(plutusObjectConverter.toPlutusData(r).serializeToBytes());
+            return sha2_256(HexUtil.decodeHexString(plutusObjectConverter.toPlutusData(r).serializeToHex()));
         });
         val batchHash = mt.hash();
 
@@ -98,7 +99,7 @@ public class VoteBatchReducer {
 
         // Build and post contract txn
         val utxoSelectionStrategy = new LargestFirstUtxoSelectionStrategy(utxoSupplier);
-        val collateralUtxos = utxoSelectionStrategy.select(sender, new Amount(LOVELACE, adaToLovelace(10000)), emptySet());
+        val collateralUtxos = utxoSelectionStrategy.select(sender, new Amount(LOVELACE, adaToLovelace(100)), emptySet());
 
         // Build the expected output
         val outputDatum = plutusObjectConverter.toPlutusData(reduceVoteBatchDatum);

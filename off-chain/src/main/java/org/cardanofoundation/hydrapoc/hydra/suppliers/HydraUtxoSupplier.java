@@ -71,6 +71,7 @@ public class HydraUtxoSupplier implements UtxoSupplier {
 
         try {
             PlutusData plutusData = PlutusDataJsonConverter.toPlutusData(inlineDatum);
+
             return plutusData.serializeToHex();
         } catch (JsonProcessingException e) {
             throw new RuntimeException("Unable to convert inlineDatum to PlutusData");

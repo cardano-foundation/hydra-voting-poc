@@ -42,6 +42,8 @@ public class HydraProtocolParamsSupplier implements ProtocolParamsSupplier {
         protocolParams.setCoinsPerUtxoWord(utxoCostPerWord);
         protocolParams.setMinFeeA(1);
         protocolParams.setMinFeeB(1);
+//        protocolParams.setMinFeeA(44);
+//        protocolParams.setMinFeeB(155381);
         protocolParams.setPriceMem(new BigDecimal(protoParamsJson.get("executionUnitPrices").get("priceMemory").asText()));
         protocolParams.setPriceStep(new BigDecimal(protoParamsJson.get("executionUnitPrices").get("priceSteps").asText()));
         protocolParams.setMaxTxExMem(protoParamsJson.get("maxTxExecutionUnits").get("memory").asText());

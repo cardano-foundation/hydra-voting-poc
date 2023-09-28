@@ -39,4 +39,3 @@ out/
 logs
 config
 spring-shell.log
-votes.json

@@ -384,4 +384,3 @@
     "utxoCostPerWord": 34488,
     "utxoCostPerByte": 4310
 }
-

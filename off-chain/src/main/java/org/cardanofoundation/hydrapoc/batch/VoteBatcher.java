@@ -24,10 +24,10 @@ import org.cardanofoundation.hydrapoc.batch.data.input.CreateVoteBatchRedeemer;
 import org.cardanofoundation.hydrapoc.batch.data.output.ChallengeProposalDatum;
 import org.cardanofoundation.hydrapoc.batch.data.output.ResultBatchDatum;
 import org.cardanofoundation.hydrapoc.batch.data.output.ResultDatum;
-import org.cardanofoundation.hydrapoc.util.PlutusScriptUtil;
-import org.cardanofoundation.hydrapoc.util.TransactionUtil;
 import org.cardanofoundation.hydrapoc.common.BalanceUtil;
 import org.cardanofoundation.hydrapoc.common.OperatorAccountProvider;
+import org.cardanofoundation.hydrapoc.util.PlutusScriptUtil;
+import org.cardanofoundation.hydrapoc.util.TransactionUtil;
 import org.cardanofoundation.list.HashedList;
 import org.springframework.retry.annotation.Backoff;
 import org.springframework.retry.annotation.Retryable;
@@ -74,7 +74,7 @@ public class VoteBatcher {
 
         val utxoTuples = voteUtxoFinder.getUtxosWithVotes(batchSize);
 
-        if (utxoTuples.size() == 0) {
+        if (utxoTuples.isEmpty()) {
             log.warn("No utxo found");
             return Optional.empty();
         }
@@ -107,7 +107,11 @@ public class VoteBatcher {
 //        log.info(JsonUtil.getPrettyJson(utxoTuples.stream().map(utxoVoteDatumTuple -> utxoVoteDatumTuple._2).toList()));
 //        log.info("########### Result Datum #############");
 
-        Function<Object, byte[]> hash_fn = vote -> sha2_256(plutusObjectConverter.toPlutusData(vote).serializeToBytes());
+        Function<Object, byte[]> hash_fn = vote -> {
+            // TODO this is clunky 0.4.4-SNAPSHOT ships serialise to bytes method
+            return sha2_256(HexUtil.decodeHexString(plutusObjectConverter.toPlutusData(vote).serializeToHex()));
+        };
+
         val hashedList = HashedList.create(voteDatums, hash_fn);
 
         val batchHash = hashedList.hash();
@@ -119,7 +123,7 @@ public class VoteBatcher {
 
         // Build and post contract txn
         val utxoSelectionStrategy = new LargestFirstUtxoSelectionStrategy(utxoSupplier);
-        val collateralUtxos = utxoSelectionStrategy.select(sender, new Amount(LOVELACE, adaToLovelace(100000)), emptySet());
+        val collateralUtxos = utxoSelectionStrategy.select(sender, new Amount(LOVELACE, adaToLovelace(1)), emptySet());
 
         // Build the expected output
         val outputDatum = plutusObjectConverter.toPlutusData(resultBatchDatum);
@@ -154,7 +158,6 @@ public class VoteBatcher {
                                 .steps(BigInteger.valueOf(0))
                                 .build()
                         )
-
                         .redeemer(plutusObjectConverter.toPlutusData(CreateVoteBatchRedeemer.create(batchHash)))
                         .redeemerTag(RedeemerTag.Spend).build())
                 .toList();
