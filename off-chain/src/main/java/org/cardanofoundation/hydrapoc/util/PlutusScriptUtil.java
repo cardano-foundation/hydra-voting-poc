@@ -66,8 +66,8 @@ public class PlutusScriptUtil {
     }
 
     public static List<Redeemer> evaluateExUnitsDef(Transaction txn,
-                                                  Set<Utxo> utxos,
-                                                  ProtocolParams protocolParams) {
+                                                    Set<Utxo> utxos,
+                                                    ProtocolParams protocolParams) {
         val txEvaluator = new TxEvaluator();
         val costMdls = new CostMdls();
         val costModelFromProtocolParams = getCostModelFromProtocolParams(protocolParams, PLUTUS_V2);
@@ -87,7 +87,7 @@ public class PlutusScriptUtil {
         val zero_time = 1660003200000L;
 
         try (SlotConfig slotConfig = new SlotConfig(slot_length, zero_slot, zero_time);
-            val initialBudgetConfig = new InitialBudgetConfig(txMem, txCpu)) {
+             val initialBudgetConfig = new InitialBudgetConfig(txMem, txCpu)) {
             val txEvaluator = new TxEvaluator(slotConfig, initialBudgetConfig);
             val costMdls = new CostMdls();
             val costModelFromProtocolParams = getCostModelFromProtocolParams(protocolParams, PLUTUS_V2);

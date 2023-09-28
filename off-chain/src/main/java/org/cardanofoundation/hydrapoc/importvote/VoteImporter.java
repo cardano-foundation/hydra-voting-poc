@@ -20,11 +20,9 @@ import com.bloxbean.cardano.client.transaction.spec.Value;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import lombok.val;
-import org.cardanofoundation.hydrapoc.util.MoreComparators;
-import org.cardanofoundation.hydrapoc.util.PlutusScriptUtil;
-import org.cardanofoundation.hydrapoc.util.TransactionUtil;
 import org.cardanofoundation.hydrapoc.common.OperatorAccountProvider;
 import org.cardanofoundation.hydrapoc.model.Vote;
+import org.cardanofoundation.hydrapoc.util.PlutusScriptUtil;
 import org.springframework.retry.annotation.Backoff;
 import org.springframework.retry.annotation.Retryable;
 import org.springframework.stereotype.Component;
@@ -32,11 +30,7 @@ import org.springframework.stereotype.Component;
 import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.util.Collection;
-import java.util.Comparator;
 import java.util.List;
-import java.util.SortedSet;
-import java.util.function.Function;
-import java.util.stream.Collectors;
 
 import static com.bloxbean.cardano.client.common.ADAConversionUtil.adaToLovelace;
 import static org.cardanofoundation.hydrapoc.util.MoreComparators.createVoteComparator;
@@ -50,7 +44,6 @@ public class VoteImporter {
     private final ProtocolParamsSupplier protocolParamsSupplier;
     private final TransactionProcessor transactionProcessor;
     private final OperatorAccountProvider operatorAccountProvider;
-    private final TransactionUtil transactionUtil;
     private final PlutusScriptUtil plutusScriptUtil;
 
     private final static PlutusObjectConverter plutusObjectConverter = new DefaultPlutusObjectConverter();
@@ -98,6 +91,9 @@ public class VoteImporter {
                         .build();
 
                 BigInteger additionalLoveLace = MinAdaCheckers.minAdaChecker().apply(context, transactionOutput);
+//                if (additionalLoveLace.longValue() == 0) {
+//                    throw new RuntimeException("Min ADA check failed for transaction output");
+//                }
                 transactionOutput.setValue(transactionOutput.getValue().plus(new Value(additionalLoveLace, null)));
 
                 outputs.add(transactionOutput);
@@ -119,7 +115,7 @@ public class VoteImporter {
             throw new RuntimeException("Transaction failed. " + result.getResponse());
         }
 
-        transactionUtil.waitForTransaction(result);
+        System.out.println("Import Transaction Id : " + result.getValue());
 
         return result.getValue();
     }

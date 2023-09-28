@@ -48,6 +48,8 @@ public class HydraClient extends HydraQueryEventListener.Stub implements HydraSt
         }
 
         var options = HydraClientOptions.builder(hydraWsUrl)
+                //.history(false)
+                .doNotPropagateLowLevelFailures(true)
                 .build();
         this.hydraWSClient = new HydraWSClient(options);
         hydraWSClient.addHydraQueryEventListener(this);
@@ -91,7 +93,10 @@ public class HydraClient extends HydraQueryEventListener.Stub implements HydraSt
             }
         }
 
-        if (response instanceof GreetingsResponse) {
+        if (response instanceof GreetingsResponse gr) {
+            var utxo = gr.getSnapshotUtxo();
+            uTxOStore.storeLatestUtxO(utxo);
+
             applyMonoSuccess(new HydraConnectRequest().key());
         }
 

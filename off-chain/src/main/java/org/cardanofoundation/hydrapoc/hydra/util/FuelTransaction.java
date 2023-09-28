@@ -54,7 +54,7 @@ public class FuelTransaction {
                         .address(receiver)
                         .value(Value
                                 .builder()
-                                .coin(adaToLovelace(100))
+                                .coin(adaToLovelace(1))
                                 .build()
                         )
                         .datumHash(HexUtil.decodeHexString(FUEL_DATA_HASH))

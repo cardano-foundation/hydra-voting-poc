@@ -2,6 +2,7 @@ package org.cardanofoundation.hydrapoc;
 
 import com.bloxbean.cardano.client.plutus.api.PlutusObjectConverter;
 import com.bloxbean.cardano.client.plutus.impl.DefaultPlutusObjectConverter;
+import com.bloxbean.cardano.client.util.HexUtil;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -67,7 +68,7 @@ public class HashedListTest {
         System.out.println("-----");
 
 
-        val hashedList = HashedList.create(items, (v) -> sha2_256(PLUTUS_OBJECT_CONVERTER.toPlutusData(v).serializeToBytes()));
+        val hashedList = HashedList.create(items, (v) -> sha2_256(HexUtil.decodeHexString(PLUTUS_OBJECT_CONVERTER.toPlutusData(v).serializeToHex())));
 
         System.out.println(encodeHexString(hashedList.hash()));
     }

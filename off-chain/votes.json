@@ -1,0 +1,153 @@
+[
+  {
+    "voter_key" : "Plz85fj35EXGTK4V5+GKAu+8ndS//Gwmo4dlaEycdsA=",
+    "voting_power" : 1103265,
+    "challenge" : 183065591,
+    "proposal" : 2175091,
+    "choice" : 1
+  }, {
+  "voter_key" : "uTnYuSaoFWipSNun+ScLhYHXXuQaP1EFtO062HnQ+eo=",
+  "voting_power" : 9931886,
+  "challenge" : 183065591,
+  "proposal" : 2490035,
+  "choice" : 1
+}, {
+  "voter_key" : "6VTD94MoSRwHVGh+InF/qAqR9d7eB1l48bu0tvSxJ60=",
+  "voting_power" : 4198563,
+  "challenge" : 183065591,
+  "proposal" : 2935682,
+  "choice" : 2
+}, {
+  "voter_key" : "dS91Qq/HkJjSs3HqWm0JytMl3XAt1W2DGZMRNACRAdw=",
+  "voting_power" : 1714785,
+  "challenge" : 183065591,
+  "proposal" : 2935682,
+  "choice" : 2
+}, {
+  "voter_key" : "8Z143vUuAv+/sDgr8px9heXtqaeCttZXd1DvWL4sLc0=",
+  "voting_power" : 4377602,
+  "challenge" : 183065591,
+  "proposal" : 425916,
+  "choice" : 0
+}, {
+  "voter_key" : "TQ8PUQe3EhrTWvdSiek2F8vwhgWB2HkFbWbhHDf/6mw=",
+  "voting_power" : 8936621,
+  "challenge" : 183065591,
+  "proposal" : 2333241,
+  "choice" : 0
+}, {
+  "voter_key" : "L73Mx8VullQSdefUf/MgAlcU/xDVcPnNwi2+bUmn/xc=",
+  "voting_power" : 5957862,
+  "challenge" : 183065591,
+  "proposal" : 425916,
+  "choice" : 2
+}, {
+  "voter_key" : "cIvvYe390lp3U3FmbSZPd2mLYfO1zoX9LNl+vJPEeuI=",
+  "voting_power" : 9565543,
+  "challenge" : 183065591,
+  "proposal" : 4001649,
+  "choice" : 0
+}, {
+  "voter_key" : "O8Al+MCsnnxa3K5myn0vVHU/21wvQhfa2r1f0Na63vA=",
+  "voting_power" : 1508342,
+  "challenge" : 183065591,
+  "proposal" : 2333241,
+  "choice" : 0
+}, {
+  "voter_key" : "nF3de3++kbVMpxXwy6uJi1OccdAMaCFUZv0ntTM7n1Q=",
+  "voting_power" : 8969357,
+  "challenge" : 183065591,
+  "proposal" : 2935682,
+  "choice" : 1
+}, {
+  "voter_key" : "cwJ+ZpJ+cxaCt3JBclow1tOJShtzSWXXSOWn8RIJ4SI=",
+  "voting_power" : 8548589,
+  "challenge" : 183065591,
+  "proposal" : 704779,
+  "choice" : 1
+}, {
+  "voter_key" : "E6iKZ6U0BvfS0giaYemeEh4Zp/rnNPeHmvUMxFwiqZw=",
+  "voting_power" : 2218298,
+  "challenge" : 183065591,
+  "proposal" : 425916,
+  "choice" : 2
+}, {
+  "voter_key" : "8zNPOfYkgkQ19o58Bv7x1B13PnWvNY2WwHMmPe7gZBU=",
+  "voting_power" : 6152965,
+  "challenge" : 183065591,
+  "proposal" : 5482659,
+  "choice" : 0
+}, {
+  "voter_key" : "dqxKPkAe0+g85kwwc6FJ5Wt1pK4se8Ot1S9xIS2Hafs=",
+  "voting_power" : 8834654,
+  "challenge" : 183065591,
+  "proposal" : 425916,
+  "choice" : 2
+}, {
+  "voter_key" : "1c6Ee0mNXmxod865oKu8mkRfpN952r8iQrJTBtgrxbI=",
+  "voting_power" : 9277119,
+  "challenge" : 183065591,
+  "proposal" : 4001649,
+  "choice" : 1
+}, {
+  "voter_key" : "10lm6ZMkNa4ViGDke9JWGJkHoewAHUw22B5kLKgKZnQ=",
+  "voting_power" : 5762496,
+  "challenge" : 183065591,
+  "proposal" : 704779,
+  "choice" : 2
+}, {
+  "voter_key" : "3d66y6JbAdODHbR7Eq2UMLsrqQkGuKd5+jZJhNAwhYM=",
+  "voting_power" : 1290139,
+  "challenge" : 183065591,
+  "proposal" : 2175091,
+  "choice" : 1
+}, {
+  "voter_key" : "4nFimpCi7rT7q3xbNdPFs5PMnAbhOK6w8vCf+KBODMY=",
+  "voting_power" : 926808,
+  "challenge" : 183065591,
+  "proposal" : 4861415,
+  "choice" : 2
+}, {
+  "voter_key" : "bTpX4T9V8RVsEZAOnQYrlsZyetVbUgTwuxFcd6LH5rU=",
+  "voting_power" : 918028,
+  "challenge" : 183065591,
+  "proposal" : 704779,
+  "choice" : 0
+}, {
+  "voter_key" : "Pl3ZAjvBD9MjqaDvpU+y9HEXJSKU4CBO1fwj6oyzHEo=",
+  "voting_power" : 8120623,
+  "challenge" : 183065591,
+  "proposal" : 530272,
+  "choice" : 2
+}, {
+  "voter_key" : "ZXlple43fCUPlQt2ODqvRz3tOJb376irF3ZLgAMpBN8=",
+  "voting_power" : 9035330,
+  "challenge" : 183065591,
+  "proposal" : 4001649,
+  "choice" : 1
+}, {
+  "voter_key" : "lknYW/jTxYzZmEWewnnxRISNFNojJN51s3Lrvi5X/lQ=",
+  "voting_power" : 3638581,
+  "challenge" : 183065591,
+  "proposal" : 4861415,
+  "choice" : 2
+}, {
+  "voter_key" : "a5XgulLHsP72yBipMBLEWunrrVgXx3OBMBwU87M1Qh0=",
+  "voting_power" : 6301200,
+  "challenge" : 183065591,
+  "proposal" : 704779,
+  "choice" : 2
+}, {
+  "voter_key" : "a4ny8t6B5YO1+6ueMfdrmfeDAjNpL8nUhg+RWazpkSA=",
+  "voting_power" : 8190011,
+  "challenge" : 183065591,
+  "proposal" : 2333241,
+  "choice" : 1
+}, {
+  "voter_key" : "r5tJgN9qXToZt7SG6DhIy6HE6zkBlbV+jZYRMBvWpA0=",
+  "voting_power" : 503693,
+  "challenge" : 183065591,
+  "proposal" : 2935682,
+  "choice" : 0
+}
+]
